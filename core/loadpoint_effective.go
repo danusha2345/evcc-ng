@@ -145,6 +145,13 @@ func (lp *Loadpoint) SocBasedPlanning() bool {
 }
 
 // effectiveMinCurrent returns the effective min current
+//
+// The minimum charging current is the most-restrictive limit from any source:
+// user-configured loadpoint minimum, vehicle minimum, and charger minimum.
+// Previously the loadpoint minimum was dropped whenever the charger reported
+// a value, which made it impossible to push min above the IEC default of 6A
+// when using e.g. Elli/EEBus chargers — they always report 6A regardless of
+// the user's loadpoint configuration (evcc-io/evcc#14418).
 func (lp *Loadpoint) effectiveMinCurrent() float64 {
 	lpMin := lp.getMinCurrent()
 	var vehicleMin, chargerMin float64
@@ -161,14 +168,7 @@ func (lp *Loadpoint) effectiveMinCurrent() float64 {
 		}
 	}
 
-	switch {
-	case max(vehicleMin, chargerMin) == 0:
-		return lpMin
-	case chargerMin > 0:
-		return max(vehicleMin, chargerMin)
-	default:
-		return max(vehicleMin, lpMin)
-	}
+	return max(vehicleMin, chargerMin, lpMin)
 }
 
 // effectiveMaxCurrent returns the effective max current

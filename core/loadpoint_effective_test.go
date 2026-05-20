@@ -24,15 +24,15 @@ func TestEffectiveMinMaxCurrent(t *testing.T) {
 		effectiveMin, effectiveMax float64
 	}{
 		{0, 0, 0, 0, 6, 16},
-		{2, 0, 0, 0, 2, 16},   // charger min lower, max empty - charger wins
-		{7, 0, 0, 0, 7, 16},   // charger min higher, max empty (no practical use)
+		{2, 0, 0, 0, 6, 16},   // charger min lower than lp default - lp wins (evcc-io/evcc#14418)
+		{7, 0, 0, 0, 7, 16},   // charger min higher than lp default - charger wins
 		{0, 10, 0, 0, 6, 10},  // charger max lower, min empty - loadpoint wins
 		{0, 20, 0, 0, 6, 16},  // charger max higher, min empty - loadpoint wins
-		{0, 0, 5, 0, 6, 16},   // vehicle min lower, max empty - loadpoint wins
-		{0, 0, 8, 0, 8, 16},   // vehicle min higher, max empty - vehicle wins
+		{0, 0, 5, 0, 6, 16},   // vehicle min lower than lp default - lp wins
+		{0, 0, 8, 0, 8, 16},   // vehicle min higher than lp default - vehicle wins
 		{0, 0, 0, 10, 6, 10},  // vehicle max lower, min empty - vehicle wins
 		{0, 0, 0, 20, 6, 16},  // vehicle max higher, min empty - loadpoint wins
-		{2, 0, 5, 0, 5, 16},   // charger + vehicle min lower, max empty - vehicle wins
+		{2, 0, 5, 0, 6, 16},   // charger + vehicle min both below lp default - lp wins
 		{0, 20, 0, 32, 6, 16}, // charger + vehicle max higher, min empty - loadpoint wins
 	}
 
