@@ -1,4 +1,10 @@
-# evcc 🚘☀️
+# evcc-ng 🚘☀️
+
+[![Boosty](https://img.shields.io/badge/Boosty-Buy_me_a_coffee-FF7143?logo=boosty&logoColor=white&style=for-the-badge)](https://boosty.to/danusha/donate)
+
+> **Community fork of [evcc-io/evcc](https://github.com/evcc-io/evcc)** by the upstream team (andig, naltatis, premultiply). All upstream code remains MIT-licensed and credits are preserved in [LICENSE](LICENSE). For the official project and commercial-charger sponsor tokens, see [sponsor.evcc.io](https://sponsor.evcc.io/). This fork focuses on community-driven improvements, additional dashboards, mobile companion tools and UI enhancements on top of the upstream codebase.
+
+If `evcc-ng` is useful to you, you can support this fork's development via [Boosty](https://boosty.to/danusha/donate) (international cards accepted). Please continue to sponsor [upstream evcc](https://sponsor.evcc.io/) — it funds the core project we depend on.
 
 [![Build](https://github.com/evcc-io/evcc/actions/workflows/nightly.yml/badge.svg)](https://github.com/evcc-io/evcc/actions/workflows/nightly.yml)
 [![Statuspage](https://img.shields.io/badge/status-evcc.io-green?color=brightgreen&link=https%3A%2F%2Fstatus.evcc.io)](https://status.evcc.io/)
@@ -73,3 +79,9 @@ For additional license information regarding fonts, icons, and other assets, ple
 See file license header for details.
 If you want to use them in your own project, one evcc sponsorship token is required per evcc instance.
 Custom licensing agreements are available - please [contact us](mailto:info@evcc.io) to discuss your specific requirements.
+
+---
+
+[![Boosty](https://img.shields.io/badge/Boosty-Buy_me_a_coffee-FF7143?logo=boosty&logoColor=white&style=for-the-badge)](https://boosty.to/danusha/donate)
+
+Support `evcc-ng` (community fork) development via [Boosty](https://boosty.to/danusha/donate) — international cards accepted. To support the upstream `evcc` project that this fork is built on, see [sponsor.evcc.io](https://sponsor.evcc.io/).
