@@ -295,12 +295,25 @@ func validateConfigurableCircuits(children []config.Config) error {
 
 type newFromConfFunc[T any] func(context.Context, string, map[string]any) (T, error)
 
-func staticInstance[T any](typ string, cc config.Named, newFromConf newFromConfFunc[T], h config.Handler[T]) error {
+// deviceWrapper produces a graceful placeholder for a device that failed
+// to initialize. Returning nil disables wrapping (legacy fatal behaviour).
+type deviceWrapper[T any] func(name, typ string, other map[string]any, err error) T
+
+func staticInstance[T any](typ string, cc config.Named, newFromConf newFromConfFunc[T], h config.Handler[T], wrap deviceWrapper[T]) error {
 	ctx, cancel := context.WithCancel(util.WithLogger(context.TODO(), util.NewLogger(cc.Name))) //nolint:govet
 
 	instance, err := newFromConf(ctx, cc.Type, cc.Other)
 	if err != nil {
-		err = &DeviceError{cc.Name, fmt.Errorf("cannot create %s '%s': %w", typ, cc.Name, err)}
+		// non-config errors are recoverable — wrap so the rest of the
+		// site can still start (evcc-io/evcc#14496). ConfigErrors
+		// (missing required field, schema violation) still surface.
+		if _, isConfigErr := errors.AsType[*util.ConfigError](err); wrap != nil && !isConfigErr {
+			log.ERROR.Printf("creating %s '%s' failed: %v", typ, cc.Name, err)
+			instance = wrap(cc.Name, cc.Type, cc.Other, err)
+			err = nil
+		} else {
+			err = &DeviceError{cc.Name, fmt.Errorf("cannot create %s '%s': %w", typ, cc.Name, err)}
+		}
 	}
 
 	if e := h.Add(config.NewStaticDevice(cc, instance)); e != nil && err == nil {
@@ -324,7 +337,7 @@ func loggerForConfig(conf *config.Config) *util.Logger {
 	return util.NewLogger(res)
 }
 
-func configurableInstance[T any](typ string, conf *config.Config, newFromConf newFromConfFunc[T], h config.Handler[T]) error {
+func configurableInstance[T any](typ string, conf *config.Config, newFromConf newFromConfFunc[T], h config.Handler[T], wrap deviceWrapper[T]) error {
 	cc := conf.Named()
 	ctx, cancel := context.WithCancel(util.WithLogger(context.TODO(), loggerForConfig(conf))) //nolint:govet
 
@@ -337,7 +350,15 @@ func configurableInstance[T any](typ string, conf *config.Config, newFromConf ne
 	if err == nil {
 		instance, err = newFromConf(ctx, typ, other)
 		if err != nil {
-			err = &DeviceError{cc.Name, fmt.Errorf("cannot create %s '%s': %w", typ, cc.Name, err)}
+			// non-config errors are recoverable — wrap so the rest of
+			// the site can still start (evcc-io/evcc#14496).
+			if _, isConfigErr := errors.AsType[*util.ConfigError](err); wrap != nil && !isConfigErr {
+				log.ERROR.Printf("creating %s '%s' failed: %v", typ, cc.Name, err)
+				instance = wrap(cc.Name, cc.Type, cc.Other, err)
+				err = nil
+			} else {
+				err = &DeviceError{cc.Name, fmt.Errorf("cannot create %s '%s': %w", typ, cc.Name, err)}
+			}
 		}
 	}
 
@@ -371,7 +392,7 @@ func configureMeters(static []config.Named, names ...string) error {
 		}
 
 		eg.Go(func() error {
-			return staticInstance("meter", cc, meter.NewFromConfig, config.Meters())
+			return staticInstance("meter", cc, meter.NewFromConfig, config.Meters(), meter.NewWrapper)
 		})
 	}
 
@@ -390,7 +411,7 @@ func configureMeters(static []config.Named, names ...string) error {
 				return nil
 			}
 
-			return configurableInstance("meter", &conf, meter.NewFromConfig, config.Meters())
+			return configurableInstance("meter", &conf, meter.NewFromConfig, config.Meters(), meter.NewWrapper)
 		})
 	}
 
@@ -415,7 +436,7 @@ func configureChargers(static []config.Named, names ...string) error {
 		}
 
 		eg.Go(func() error {
-			return staticInstance("charger", cc, charger.NewFromConfig, config.Chargers())
+			return staticInstance("charger", cc, charger.NewFromConfig, config.Chargers(), charger.NewWrapper)
 		})
 	}
 
@@ -434,7 +455,7 @@ func configureChargers(static []config.Named, names ...string) error {
 				return nil
 			}
 
-			return configurableInstance("charger", &conf, charger.NewFromConfig, config.Chargers())
+			return configurableInstance("charger", &conf, charger.NewFromConfig, config.Chargers(), charger.NewWrapper)
 		})
 	}
 
@@ -921,7 +942,7 @@ func configureMessengers(confMessaging *globalconfig.Messaging, confEvents *glob
 		}
 
 		eg.Go(func() error {
-			return staticInstance("messenger", cc, messenger.NewFromConfig, config.Messengers())
+			return staticInstance("messenger", cc, messenger.NewFromConfig, config.Messengers(), nil)
 		})
 	}
 
@@ -933,7 +954,7 @@ func configureMessengers(confMessaging *globalconfig.Messaging, confEvents *glob
 
 	for _, conf := range configurable {
 		eg.Go(func() error {
-			return configurableInstance("messenger", &conf, messenger.NewFromConfig, config.Messengers())
+			return configurableInstance("messenger", &conf, messenger.NewFromConfig, config.Messengers(), nil)
 		})
 	}
 
