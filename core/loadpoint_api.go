@@ -713,6 +713,110 @@ func (lp *Loadpoint) SetMinCurrent(current float64) error {
 	return nil
 }
 
+// phaseCurrentOverride returns the per-phase override for the given
+// active phase mode if set, otherwise nil. Used by effectiveMin/MaxCurrent
+// to honor evcc-io/evcc#14661 — e.g. Tesla 1p@16A but 3p@6A for surplus.
+//
+// activePhases is a resolver closure so callers that have no override
+// configured (the common case) skip the relatively expensive
+// activePhases() / vehicle.Phases() dispatch entirely.
+func phaseCurrentOverride(p1, p3 *float64, activePhases func() int) *float64 {
+	if p1 == nil && p3 == nil {
+		return nil
+	}
+	switch activePhases() {
+	case 1:
+		return p1
+	case 3:
+		return p3
+	}
+	return nil
+}
+
+// GetMinCurrent1p returns the optional 1-phase override or nil
+func (lp *Loadpoint) GetMinCurrent1p() *float64 {
+	lp.RLock()
+	defer lp.RUnlock()
+	return lp.minCurrent1p
+}
+
+// SetMinCurrent1p sets or clears the 1-phase min current override
+func (lp *Loadpoint) SetMinCurrent1p(current *float64) error {
+	if current != nil && lp.maxCurrent1p != nil && *current > *lp.maxCurrent1p {
+		return errors.New("min 1p current must be smaller or equal than max 1p current")
+	}
+	lp.Lock()
+	defer lp.Unlock()
+	lp.log.DEBUG.Println("set min current 1p:", printPtr("%.1f", current))
+	lp.minCurrent1p = current
+	lp.settings.SetFloatPtr(keys.MinCurrent1p, current)
+	lp.publish(keys.MinCurrent1p, current)
+	return nil
+}
+
+// GetMaxCurrent1p returns the optional 1-phase override or nil
+func (lp *Loadpoint) GetMaxCurrent1p() *float64 {
+	lp.RLock()
+	defer lp.RUnlock()
+	return lp.maxCurrent1p
+}
+
+// SetMaxCurrent1p sets or clears the 1-phase max current override
+func (lp *Loadpoint) SetMaxCurrent1p(current *float64) error {
+	if current != nil && lp.minCurrent1p != nil && *current < *lp.minCurrent1p {
+		return errors.New("max 1p current must be greater or equal than min 1p current")
+	}
+	lp.Lock()
+	defer lp.Unlock()
+	lp.log.DEBUG.Println("set max current 1p:", printPtr("%.1f", current))
+	lp.maxCurrent1p = current
+	lp.settings.SetFloatPtr(keys.MaxCurrent1p, current)
+	lp.publish(keys.MaxCurrent1p, current)
+	return nil
+}
+
+// GetMinCurrent3p returns the optional 3-phase override or nil
+func (lp *Loadpoint) GetMinCurrent3p() *float64 {
+	lp.RLock()
+	defer lp.RUnlock()
+	return lp.minCurrent3p
+}
+
+// SetMinCurrent3p sets or clears the 3-phase min current override
+func (lp *Loadpoint) SetMinCurrent3p(current *float64) error {
+	if current != nil && lp.maxCurrent3p != nil && *current > *lp.maxCurrent3p {
+		return errors.New("min 3p current must be smaller or equal than max 3p current")
+	}
+	lp.Lock()
+	defer lp.Unlock()
+	lp.log.DEBUG.Println("set min current 3p:", printPtr("%.1f", current))
+	lp.minCurrent3p = current
+	lp.settings.SetFloatPtr(keys.MinCurrent3p, current)
+	lp.publish(keys.MinCurrent3p, current)
+	return nil
+}
+
+// GetMaxCurrent3p returns the optional 3-phase override or nil
+func (lp *Loadpoint) GetMaxCurrent3p() *float64 {
+	lp.RLock()
+	defer lp.RUnlock()
+	return lp.maxCurrent3p
+}
+
+// SetMaxCurrent3p sets or clears the 3-phase max current override
+func (lp *Loadpoint) SetMaxCurrent3p(current *float64) error {
+	if current != nil && lp.minCurrent3p != nil && *current < *lp.minCurrent3p {
+		return errors.New("max 3p current must be greater or equal than min 3p current")
+	}
+	lp.Lock()
+	defer lp.Unlock()
+	lp.log.DEBUG.Println("set max current 3p:", printPtr("%.1f", current))
+	lp.maxCurrent3p = current
+	lp.settings.SetFloatPtr(keys.MaxCurrent3p, current)
+	lp.publish(keys.MaxCurrent3p, current)
+	return nil
+}
+
 // GetMaxCurrent returns the max loadpoint current
 func (lp *Loadpoint) GetMaxCurrent() float64 {
 	lp.RLock()

@@ -66,6 +66,17 @@ type API interface {
 	// SetMaxCurrent sets the max charging current
 	SetMaxCurrent(float64) error
 
+	// Per-phase current overrides (evcc-io/evcc#14661). nil means
+	// "fall back to the global loadpoint min/max".
+	GetMinCurrent1p() *float64
+	SetMinCurrent1p(*float64) error
+	GetMaxCurrent1p() *float64
+	SetMaxCurrent1p(*float64) error
+	GetMinCurrent3p() *float64
+	SetMinCurrent3p(*float64) error
+	GetMaxCurrent3p() *float64
+	SetMaxCurrent3p(*float64) error
+
 	// GetMode returns the current charge mode
 	GetMode() api.ChargeMode
 	// SetMode sets the charge mode

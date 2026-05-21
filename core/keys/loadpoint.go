@@ -13,6 +13,10 @@ const (
 	Priority          = "priority"         // priority
 	MinCurrent        = "minCurrent"       // min current
 	MaxCurrent        = "maxCurrent"       // max current
+	MinCurrent1p      = "minCurrent1p"     // optional override for 1-phase charging
+	MaxCurrent1p      = "maxCurrent1p"     // optional override for 1-phase charging
+	MinCurrent3p      = "minCurrent3p"     // optional override for 3-phase charging
+	MaxCurrent3p      = "maxCurrent3p"     // optional override for 3-phase charging
 	MinSoc            = "minSoc"           // min soc
 	MinSocNotReached  = "minSocNotReached" // min soc not reached
 	LimitSoc          = "limitSoc"         // limit soc

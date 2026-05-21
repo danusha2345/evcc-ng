@@ -72,6 +72,44 @@ func TestEffectiveMinMaxCurrent(t *testing.T) {
 	}
 }
 
+func TestEffectiveCurrentPerPhaseOverride(t *testing.T) {
+	// evcc-io/evcc#14661 — verify that per-phase overrides take precedence
+	// over the loadpoint global min/max when active phases match.
+	p := func(v float64) *float64 { return &v }
+
+	tc := []struct {
+		name                                       string
+		phases                                     int
+		minCurrent1p, maxCurrent1p                 *float64
+		minCurrent3p, maxCurrent3p                 *float64
+		effectiveMin, effectiveMax                 float64
+	}{
+		{name: "no overrides 1p uses default", phases: 1, effectiveMin: 6, effectiveMax: 16},
+		{name: "no overrides 3p uses default", phases: 3, effectiveMin: 6, effectiveMax: 16},
+		{name: "1p min override active", phases: 1, minCurrent1p: p(10), effectiveMin: 10, effectiveMax: 16},
+		{name: "1p override ignored in 3p", phases: 3, minCurrent1p: p(10), effectiveMin: 6, effectiveMax: 16},
+		{name: "3p min override active", phases: 3, minCurrent3p: p(8), effectiveMin: 8, effectiveMax: 16},
+		{name: "3p override ignored in 1p", phases: 1, minCurrent3p: p(8), effectiveMin: 6, effectiveMax: 16},
+		{name: "1p max override active", phases: 1, maxCurrent1p: p(13), effectiveMin: 6, effectiveMax: 13},
+		{name: "3p max override active", phases: 3, maxCurrent3p: p(10), effectiveMin: 6, effectiveMax: 10},
+		{name: "both phase overrides in 3p", phases: 3, minCurrent1p: p(10), minCurrent3p: p(8), maxCurrent1p: p(13), maxCurrent3p: p(10), effectiveMin: 8, effectiveMax: 10},
+	}
+
+	for _, tc := range tc {
+		t.Run(tc.name, func(t *testing.T) {
+			lp := NewLoadpoint(util.NewLogger("test"), nil)
+			lp.phases = tc.phases
+			lp.minCurrent1p = tc.minCurrent1p
+			lp.maxCurrent1p = tc.maxCurrent1p
+			lp.minCurrent3p = tc.minCurrent3p
+			lp.maxCurrent3p = tc.maxCurrent3p
+
+			assert.Equal(t, tc.effectiveMin, lp.effectiveMinCurrent(), "min")
+			assert.Equal(t, tc.effectiveMax, lp.effectiveMaxCurrent(), "max")
+		})
+	}
+}
+
 func TestNextPlan(t *testing.T) {
 	clock := clock.NewMock()
 

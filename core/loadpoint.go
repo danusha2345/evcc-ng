@@ -114,6 +114,12 @@ type Loadpoint struct {
 	priority                 int      // Priority
 	minCurrent               float64  // PV mode: start current	Min+PV mode: min current
 	maxCurrent               float64  // Max allowed current. Physically ensured by the charger
+	// Optional per-phase overrides (evcc-io/evcc#14661). nil = fall back to minCurrent/maxCurrent.
+	// Use case: Tesla can charge 1p@16A but needs only 6A in 3p for PV surplus start.
+	minCurrent1p             *float64 // override for 1-phase charging
+	maxCurrent1p             *float64 // override for 1-phase charging
+	minCurrent3p             *float64 // override for 3-phase charging
+	maxCurrent3p             *float64 // override for 3-phase charging
 	phasesConfigured         int      // Charger configured phase mode 0/1/3
 	limitSoc                 int      // Session limit for soc
 	limitEnergy              float64  // Session limit for energy
@@ -354,6 +360,18 @@ func (lp *Loadpoint) restoreSettings() {
 	}
 	if v, err := lp.settings.Float(keys.MaxCurrent); err == nil && v > 0 {
 		lp.setMaxCurrent(v)
+	}
+	if v, err := lp.settings.Float(keys.MinCurrent1p); err == nil && v > 0 {
+		lp.minCurrent1p = &v
+	}
+	if v, err := lp.settings.Float(keys.MaxCurrent1p); err == nil && v > 0 {
+		lp.maxCurrent1p = &v
+	}
+	if v, err := lp.settings.Float(keys.MinCurrent3p); err == nil && v > 0 {
+		lp.minCurrent3p = &v
+	}
+	if v, err := lp.settings.Float(keys.MaxCurrent3p); err == nil && v > 0 {
+		lp.maxCurrent3p = &v
 	}
 	if v, err := lp.settings.Int(keys.LimitSoc); err == nil && v > 0 {
 		lp.setLimitSoc(int(v))

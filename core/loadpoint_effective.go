@@ -152,8 +152,16 @@ func (lp *Loadpoint) SocBasedPlanning() bool {
 // a value, which made it impossible to push min above the IEC default of 6A
 // when using e.g. Elli/EEBus chargers — they always report 6A regardless of
 // the user's loadpoint configuration (evcc-io/evcc#14418).
+//
+// If a per-phase override is configured for the currently active phase mode
+// (1p or 3p) it replaces the loadpoint minimum — letting users e.g. require
+// 10A in 1p to cap conversion losses while still allowing PV surplus from
+// 6A in 3p (evcc-io/evcc#14661).
 func (lp *Loadpoint) effectiveMinCurrent() float64 {
 	lpMin := lp.getMinCurrent()
+	if override := phaseCurrentOverride(lp.minCurrent1p, lp.minCurrent3p, lp.activePhases); override != nil {
+		lpMin = *override
+	}
 	var vehicleMin, chargerMin float64
 
 	if v := lp.GetVehicle(); v != nil {
@@ -172,8 +180,14 @@ func (lp *Loadpoint) effectiveMinCurrent() float64 {
 }
 
 // effectiveMaxCurrent returns the effective max current
+//
+// Per-phase overrides (evcc-io/evcc#14661) let users e.g. cap a Tesla at
+// 16A in 1p to avoid phase switching while still allowing the full 16A in 3p.
 func (lp *Loadpoint) effectiveMaxCurrent() float64 {
 	maxCurrent := lp.getMaxCurrent()
+	if override := phaseCurrentOverride(lp.maxCurrent1p, lp.maxCurrent3p, lp.activePhases); override != nil {
+		maxCurrent = *override
+	}
 
 	if v := lp.GetVehicle(); v != nil {
 		if res, ok := v.OnIdentified().GetMaxCurrent(); ok && res > 0 {
