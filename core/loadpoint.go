@@ -493,6 +493,12 @@ func (lp *Loadpoint) evChargeStartHandler() {
 		if session.Created.IsZero() {
 			session.Created = lp.clock.Now()
 		}
+		// vehicle identification can lag behind createSession(), so the
+		// SoC snapshot may have been unavailable then — retry now that the
+		// car is actually pulling power (evcc-io/evcc#6144)
+		if session.SocStart == nil {
+			session.SocStart = lp.sessionSocSnapshot()
+		}
 	})
 }
 

@@ -258,6 +258,20 @@ export default defineComponent({
 					format: (value) => this.fmtNumber(distanceValue(value), 0),
 				},
 				{
+					name: "socStart",
+					unit: "%",
+					total: null,
+					value: (session) => session.socStart ?? null,
+					format: (value) => this.fmtNumber(value, 0),
+				},
+				{
+					name: "socEnd",
+					unit: "%",
+					total: null,
+					value: (session) => session.socEnd ?? null,
+					format: (value) => this.fmtNumber(value, 0),
+				},
+				{
 					name: "avgPower",
 					unit: "kW",
 					total: this.avgPower,

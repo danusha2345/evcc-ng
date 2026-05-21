@@ -6,6 +6,8 @@ export interface Session {
   identifier: string;
   vehicle: string;
   odometer: number;
+  socStart: number | null;
+  socEnd: number | null;
   meterStart: number;
   meterStop: number;
   chargedEnergy: number;

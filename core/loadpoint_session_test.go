@@ -19,7 +19,24 @@ func sessionStart(lp *Loadpoint) func(session *session.Session) {
 		if session.Created.IsZero() {
 			session.Created = lp.clock.Now()
 		}
+		if session.SocStart == nil {
+			session.SocStart = lp.sessionSocSnapshot()
+		}
 	}
+}
+
+func TestSessionSocSnapshot(t *testing.T) {
+	t.Run("no soc returns nil", func(t *testing.T) {
+		lp := &Loadpoint{}
+		assert.Nil(t, lp.sessionSocSnapshot())
+	})
+
+	t.Run("soc available returns pointer", func(t *testing.T) {
+		lp := &Loadpoint{vehicleSoc: 42}
+		got := lp.sessionSocSnapshot()
+		require.NotNil(t, got)
+		assert.Equal(t, 42.0, *got)
+	})
 }
 
 func TestSession(t *testing.T) {
@@ -52,17 +69,21 @@ func TestSession(t *testing.T) {
 		chargeMeter: cm,
 	}
 
-	// create session
+	// create session — vehicle soc captured if known at this point
+	lp.vehicleSoc = 55
 	me.EXPECT().TotalEnergy().Return(1.0, nil)
 	lp.createSession()
 	assert.NotNil(t, lp.session)
+	require.NotNil(t, lp.session.SocStart)
+	assert.Equal(t, 55.0, *lp.session.SocStart)
 
 	// start charging
 	lp.updateSession(sessionStart(lp))
 	assert.Equal(t, clock.Now(), lp.session.Created)
 
-	// stop charging
+	// stop charging — capture final SoC after a bit of charge
 	clock.Add(time.Hour)
+	lp.vehicleSoc = 80
 	lp.energyMetrics.Update(1.23)
 	me.EXPECT().TotalEnergy().Return(1.0+lp.getChargedEnergy()/1e3, nil) // match chargedEnergy
 
@@ -70,6 +91,8 @@ func TestSession(t *testing.T) {
 	assert.NotNil(t, lp.session)
 	assert.Equal(t, lp.getChargedEnergy()/1e3, lp.session.ChargedEnergy)
 	assert.Equal(t, clock.Now(), lp.session.Finished)
+	require.NotNil(t, lp.session.SocEnd)
+	assert.Equal(t, 80.0, *lp.session.SocEnd)
 
 	s, err := db.Sessions()
 	require.NoError(t, err)

@@ -12,6 +12,21 @@ import (
 	"github.com/jinzhu/now"
 )
 
+// sessionSocSnapshot returns the current vehicle SoC suitable for storage in
+// a charging session, or nil when no usable value exists (no vehicle, SoC
+// not yet known, or the charger is a heat pump where SoC is repurposed as
+// temperature and would be misleading in a charge log — evcc-io/evcc#6144).
+func (lp *Loadpoint) sessionSocSnapshot() *float64 {
+	if lp.chargerHasFeature(api.Heating) {
+		return nil
+	}
+	if lp.vehicleSoc <= 0 {
+		return nil
+	}
+	soc := lp.vehicleSoc
+	return &soc
+}
+
 func (lp *Loadpoint) chargeMeterTotal() float64 {
 	m, ok := api.Cap[api.MeterEnergy](lp.chargeMeter)
 	if !ok {
@@ -58,6 +73,10 @@ func (lp *Loadpoint) createSession() {
 		lp.session.ReferenceCo2PerKWh = tariff.AverageRate(lp.site.GetTariff(api.TariffUsageCo2), 24*time.Hour)
 	}
 
+	// initial SoC — may still be nil if vehicle wasn't identified yet;
+	// evChargeStartHandler retries when the session actually goes live
+	lp.session.SocStart = lp.sessionSocSnapshot()
+
 	// energy
 	lp.energyMetrics.Reset()
 	lp.energyMetrics.Publish("session", lp)
@@ -95,6 +114,7 @@ func (lp *Loadpoint) stopSession() {
 
 	s.Finished = lp.clock.Now()
 	s.ChargeDuration = new(lp.chargeDuration.Abs())
+	s.SocEnd = lp.sessionSocSnapshot()
 
 	lp.applyEnergyMetrics(s)
 }

@@ -1489,6 +1489,8 @@
     "price": "Cost",
     "reallyDelete": "Do you really want to delete this session?",
     "showIndividualEntries": "Show individual sessions",
+    "socEnd": "SoC End",
+    "socStart": "SoC Start",
     "solar": "Solar",
     "title": "Charging Sessions",
     "total": "Total",

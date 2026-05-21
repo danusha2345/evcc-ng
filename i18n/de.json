@@ -1489,6 +1489,8 @@
     "price": "Kosten",
     "reallyDelete": "Möchtest du diesen Ladevorgang wirklich löschen?",
     "showIndividualEntries": "Einzelne Ladevorgänge anzeigen",
+    "socEnd": "SoC Ende",
+    "socStart": "SoC Start",
     "solar": "Sonne",
     "title": "Ladevorgänge",
     "total": "Insgesamt",
