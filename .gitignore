@@ -49,3 +49,7 @@ asset-stats.html
 /evcc.db
 /tsconfig.tsbuildinfo
 *storybook.log
+
+# Local tooling outputs (not part of upstream)
+.claude/
+graphify-out/
