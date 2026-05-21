@@ -77,6 +77,15 @@ type API interface {
 	SetBatteryDischargeControl(bool) error
 
 	//
+	// PV feed-in control
+	//
+
+	GetFeedInControl() bool
+	SetFeedInControl(bool) error
+	GetFeedInControlThreshold() float64
+	SetFeedInControlThreshold(float64) error
+
+	//
 	// battery control external
 	//
 

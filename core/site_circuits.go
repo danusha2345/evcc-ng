@@ -7,6 +7,7 @@ import (
 
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/keys"
+	"github.com/evcc-io/evcc/tariff"
 	"github.com/evcc-io/evcc/util/config"
 	"github.com/samber/lo"
 )
@@ -86,6 +87,26 @@ func (site *Site) dimMeters(dim bool) error {
 	}
 
 	return errs
+}
+
+// shouldFeedInCurtail reports whether PV should be curtailed based on the
+// current feed-in tariff. Returns false unless feed-in control is enabled,
+// a feed-in tariff is configured, and the current price is below the
+// configured threshold. The "<= threshold" guard matches the user-facing
+// promise: "stop exporting once it costs me money" (evcc-io/evcc#21747).
+func (site *Site) shouldFeedInCurtail() bool {
+	if !site.GetFeedInControl() {
+		return false
+	}
+	t := site.GetTariff(api.TariffUsageFeedIn)
+	if t == nil {
+		return false
+	}
+	price, err := tariff.Now(t)
+	if err != nil {
+		return false
+	}
+	return price <= site.GetFeedInControlThreshold()
 }
 
 func (site *Site) curtailPV(curtail bool) error {

@@ -20,6 +20,7 @@ var _ site.API = (*Site)(nil)
 var (
 	ErrBatteryNotConfigured       = errors.New("battery not configured")
 	ErrBatteryControlNotAvailable = errors.New("battery control not available")
+	ErrFeedInControlNotAvailable  = errors.New("feed-in control not available — no PV meter implements api.Curtailer")
 )
 
 // isConfigurable checks if the meter is configurable
@@ -312,6 +313,67 @@ func (site *Site) GetTariff(tariff api.TariffUsage) api.Tariff {
 	site.RLock()
 	defer site.RUnlock()
 	return site.tariffs.Get(tariff)
+}
+
+// hasPVCurtailer reports whether at least one PV meter implements api.Curtailer
+// — required for site-level feed-in control to actually take effect.
+func (site *Site) hasPVCurtailer() bool {
+	for _, dev := range site.pvMeters {
+		if api.HasCap[api.Curtailer](dev.Instance()) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetFeedInControl returns whether automatic PV curtailment on cheap feed-in is enabled
+func (site *Site) GetFeedInControl() bool {
+	site.RLock()
+	defer site.RUnlock()
+	return site.feedInControl
+}
+
+// SetFeedInControl toggles automatic PV curtailment when the feed-in tariff is unprofitable
+func (site *Site) SetFeedInControl(val bool) error {
+	site.log.DEBUG.Println("set feed-in control:", val)
+
+	if val && !site.hasPVCurtailer() {
+		return ErrFeedInControlNotAvailable
+	}
+
+	site.Lock()
+	defer site.Unlock()
+
+	if site.feedInControl != val {
+		site.feedInControl = val
+		settings.SetBool(keys.FeedInControl, val)
+		site.publish(keys.FeedInControl, val)
+	}
+
+	return nil
+}
+
+// GetFeedInControlThreshold returns the price threshold (per kWh) below which PV is curtailed
+func (site *Site) GetFeedInControlThreshold() float64 {
+	site.RLock()
+	defer site.RUnlock()
+	return site.feedInControlThreshold
+}
+
+// SetFeedInControlThreshold sets the price threshold (per kWh) below which PV is curtailed
+func (site *Site) SetFeedInControlThreshold(val float64) error {
+	site.log.DEBUG.Println("set feed-in control threshold:", val)
+
+	site.Lock()
+	defer site.Unlock()
+
+	if site.feedInControlThreshold != val {
+		site.feedInControlThreshold = val
+		settings.SetFloat(keys.FeedInControlThreshold, val)
+		site.publish(keys.FeedInControlThreshold, val)
+	}
+
+	return nil
 }
 
 // GetBatteryDischargeControl returns the battery control mode (no discharge only)

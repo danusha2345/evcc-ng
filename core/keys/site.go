@@ -54,4 +54,8 @@ const (
 	// smart charging
 	SmartCostAvailable           = "smartCostAvailable"           // smart cost available
 	SmartFeedInPriorityAvailable = "smartFeedInPriorityAvailable" // smart feed-in priority available
+
+	// PV feed-in control (curtail PV when grid export is unprofitable)
+	FeedInControl          = "feedInControl"          // enable curtailing PV when feed-in price drops below threshold
+	FeedInControlThreshold = "feedInControlThreshold" // price threshold (per kWh) below which curtailment is triggered
 )

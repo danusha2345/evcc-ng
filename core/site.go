@@ -79,6 +79,10 @@ type Site struct {
 	batteryDischargeControl bool     // prevent battery discharge for fast and planned charging
 	batteryGridChargeLimit  *float64 // grid charging limit
 
+	// PV feed-in control (curtail PV when grid export would cost money)
+	feedInControl          bool    // enable: curtail PV when feed-in tariff drops below threshold
+	feedInControlThreshold float64 // price/kWh threshold; default 0 means "stop exporting once it costs money"
+
 	loadpoints  []*Loadpoint             // Loadpoints
 	tariffs     *tariff.Tariffs          // Tariffs
 	coordinator *coordinator.Coordinator // Vehicles
@@ -343,6 +347,16 @@ func (site *Site) restoreSettings() error {
 	}
 	if v, err := settings.Float(keys.BatteryGridChargeLimit); err == nil {
 		if err := site.SetBatteryGridChargeLimit(&v); err != nil && !errors.Is(err, ErrBatteryControlNotAvailable) {
+			return err
+		}
+	}
+	if v, err := settings.Float(keys.FeedInControlThreshold); err == nil {
+		if err := site.SetFeedInControlThreshold(v); err != nil {
+			return err
+		}
+	}
+	if v, err := settings.Bool(keys.FeedInControl); err == nil {
+		if err := site.SetFeedInControl(v); err != nil && !errors.Is(err, ErrFeedInControlNotAvailable) {
 			return err
 		}
 	}
@@ -950,21 +964,17 @@ func (site *Site) update(lp updater) {
 
 		site.publishCircuits()
 
-		var wg sync.WaitGroup
+		if err := site.dimMeters(circuitDimmed(site.circuit)); err != nil {
+			site.log.ERROR.Println(err)
+		}
+	}
 
-		wg.Go(func() {
-			if err := site.dimMeters(circuitDimmed(site.circuit)); err != nil {
-				site.log.ERROR.Println(err)
-			}
-		})
-
-		wg.Go(func() {
-			if err := site.curtailPV(circuitCurtailed(site.circuit)); err != nil {
-				site.log.ERROR.Println(err)
-			}
-		})
-
-		wg.Wait()
+	// curtail PV when either EEG §9 circuit dimming OR feed-in price drops
+	// below threshold. Runs every tick regardless of whether a circuit is
+	// configured (evcc-io/evcc#21747).
+	curtail := site.shouldFeedInCurtail() || (site.circuit != nil && circuitCurtailed(site.circuit))
+	if err := site.curtailPV(curtail); err != nil {
+		site.log.ERROR.Println(err)
 	}
 
 	// prioritize if possible
@@ -1049,6 +1059,8 @@ func (site *Site) prepare() {
 	site.publish(keys.BufferStartSoc, site.bufferStartSoc)
 	site.publish(keys.BatteryMode, site.batteryMode)
 	site.publish(keys.BatteryDischargeControl, site.batteryDischargeControl)
+	site.publish(keys.FeedInControl, site.feedInControl)
+	site.publish(keys.FeedInControlThreshold, site.feedInControlThreshold)
 	site.publish(keys.ResidualPower, site.GetResidualPower())
 	site.publish(keys.SmartCostAvailable, site.isDynamicTariff(api.TariffUsagePlanner))
 	site.publish(keys.SmartFeedInPriorityAvailable, site.isDynamicTariff(api.TariffUsageFeedIn))
