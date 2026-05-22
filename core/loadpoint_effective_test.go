@@ -78,11 +78,11 @@ func TestEffectiveCurrentPerPhaseOverride(t *testing.T) {
 	p := func(v float64) *float64 { return &v }
 
 	tc := []struct {
-		name                                       string
-		phases                                     int
-		minCurrent1p, maxCurrent1p                 *float64
-		minCurrent3p, maxCurrent3p                 *float64
-		effectiveMin, effectiveMax                 float64
+		name                       string
+		phases                     int
+		minCurrent1p, maxCurrent1p *float64
+		minCurrent3p, maxCurrent3p *float64
+		effectiveMin, effectiveMax float64
 	}{
 		{name: "no overrides 1p uses default", phases: 1, effectiveMin: 6, effectiveMax: 16},
 		{name: "no overrides 3p uses default", phases: 3, effectiveMin: 6, effectiveMax: 16},

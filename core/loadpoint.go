@@ -110,10 +110,10 @@ type Loadpoint struct {
 	MinCurrent_    float64       `mapstructure:"minCurrent"`    // ignored, present for compatibility
 	MaxCurrent_    float64       `mapstructure:"maxCurrent"`    // ignored, present for compatibility
 
-	title                    string   // UI title
-	priority                 int      // Priority
-	minCurrent               float64  // PV mode: start current	Min+PV mode: min current
-	maxCurrent               float64  // Max allowed current. Physically ensured by the charger
+	title      string  // UI title
+	priority   int     // Priority
+	minCurrent float64 // PV mode: start current	Min+PV mode: min current
+	maxCurrent float64 // Max allowed current. Physically ensured by the charger
 	// Optional per-phase overrides (evcc-io/evcc#14661). nil = fall back to minCurrent/maxCurrent.
 	// Use case: Tesla can charge 1p@16A but needs only 6A in 3p for PV surplus start.
 	minCurrent1p             *float64 // override for 1-phase charging
