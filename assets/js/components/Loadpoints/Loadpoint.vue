@@ -5,7 +5,7 @@
 			:class="expandLoadpointHeader ? 'd-lg-block d-xl-flex' : ''"
 		>
 			<div class="d-flex justify-content-between align-items-center mb-3 text-truncate">
-				<h3 class="me-2 mb-0 text-truncate d-flex">
+				<h3 class="me-2 mb-0 text-truncate d-flex align-items-center">
 					<VehicleIcon
 						v-if="chargerIcon"
 						:name="chargerIcon"
@@ -14,6 +14,13 @@
 					<div class="text-truncate">
 						{{ loadpointTitle }}
 					</div>
+					<span
+						v-if="chargerFeatureOffline"
+						class="badge rounded-pill text-bg-secondary ms-2 flex-shrink-0 fw-normal"
+						:title="$t('main.loadpoint.chargerOfflineHelp')"
+					>
+						{{ $t("main.loadpoint.chargerOffline") }}
+					</span>
 				</h3>
 				<LoadpointSettingsButton
 					:class="expandLoadpointHeader ? 'd-lg-block d-xl-none' : ''"
@@ -165,6 +172,7 @@ export default defineComponent({
 		chargerStatusReason: String as PropType<CHARGER_STATUS_REASON | null>,
 		chargerFeatureIntegratedDevice: Boolean,
 		chargerFeatureHeating: Boolean,
+		chargerFeatureOffline: Boolean,
 		chargerFeatureContinuous: Boolean,
 		chargerIcon: String as PropType<string | null>,
 

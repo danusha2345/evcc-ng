@@ -1218,6 +1218,8 @@
     "loadpoint": {
       "avgPrice": "⌀ Price",
       "charged": "Charged",
+      "chargerOffline": "offline",
+      "chargerOfflineHelp": "The charger could not be reached at startup. evcc keeps running; other devices are unaffected. Check the charger and restart evcc to reconnect.",
       "co2": "⌀ CO₂",
       "duration": "Duration",
       "emission": "Emission",

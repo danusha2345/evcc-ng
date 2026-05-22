@@ -1218,6 +1218,8 @@
     "loadpoint": {
       "avgPrice": "⌀ Preis",
       "charged": "Geladen",
+      "chargerOffline": "offline",
+      "chargerOfflineHelp": "Die Wallbox war beim Start nicht erreichbar. evcc läuft weiter; andere Geräte sind nicht betroffen. Wallbox prüfen und evcc neu starten, um neu zu verbinden.",
       "co2": "⌀ CO₂",
       "duration": "Ladedauer",
       "emission": "Emission",

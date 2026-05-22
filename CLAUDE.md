@@ -1,3 +1,32 @@
+# evcc-ng — community fork
+
+Fork of `evcc-io/evcc` focused on fixing long-standing backlog issues and
+adding top-voted features. Origin: `danusha2345/evcc-ng`. Keep `master`
+rebased on upstream periodically. Donations: a Boosty link in the README,
+nothing more.
+
+## Changes on top of upstream
+
+Bug fixes:
+- #29922 race on `POST /api/vehicles/{id}/plan/strategy` — per-vehicle mutex (`server/http_vehicle_handler.go`)
+- #29864 Peugeot/PSA `evcc token` bootstrap — skip validating instantiation (`cmd/token.go`)
+- #30006 Hyundai 12V drain — passive vehicle test polling (`server/http_config_helper.go`)
+- #28652 Tesla vehicle-api wakeup on `ErrAsleep` (`core/loadpoint.go`)
+- #29682 solar forecast interval safety floors (`tariff/tariff.go`)
+- #14418 EEBus/Elli loadpoint minCurrent respected (`core/loadpoint_effective.go`)
+
+Features (backend + UI unless noted):
+- #6144 vehicle SoC start/end in charge log (`core/session/`, Sessions UI)
+- #14661 per-phase 1p/3p current limits (`core/loadpoint*`, settings modal)
+- #21747 zero feed-in / PV curtailment on negative prices (`core/site*`, forecast view)
+- #14496 graceful startup when a charger/meter fails to init (`charger/wrapper.go`, `meter/wrapper.go`, `cmd/setup.go`, offline badge on loadpoint card)
+
+Conventions: Go tests via `make test` (or `CGO_ENABLED=0 go test ./...`),
+UI via `npm run lint` (eslint+vue-tsc) + `npm test`. New i18n strings go in
+both `i18n/en.json` and `i18n/de.json`. Frontend is Vue 3 Options API.
+Runtime site/loadpoint settings persist via `settings.Set*` (not YAML) and
+publish to the UI through the WebSocket state snapshot.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships. Current scope: `core/`, `api/`, `server/` (control plane).

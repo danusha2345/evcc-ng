@@ -274,6 +274,7 @@ export interface Loadpoint {
   chargerFeatureHeating: boolean;
   chargerFeatureIntegratedDevice: boolean;
   chargerFeatureSwitchDevice: boolean;
+  chargerFeatureOffline: boolean;
   chargerIcon: string | null;
   chargerPhases1p3p: boolean;
   chargerSinglePhase: boolean;
