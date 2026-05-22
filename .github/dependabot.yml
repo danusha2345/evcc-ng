@@ -1,14 +1,17 @@
 version: 2
+# Fork note: the inherited upstream CI workflows (release, docs, website,
+# gh-aw triage) don't run here — they need upstream secrets / Depot infra.
+# So github-actions version bumps were pure noise and have been disabled.
+# Security advisories still surface via Dependabot alerts regardless of this
+# file. Docker base-image updates are kept, but major bumps are ignored
+# because we can't validate a UI build through the (non-functional) CI.
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    labels:
-      - "infrastructure"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "monthly"
     labels:
       - "infrastructure"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
