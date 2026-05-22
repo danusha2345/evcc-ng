@@ -102,6 +102,7 @@ func init() {
 
 	rootCmd.Flags().Bool(flagDisableAuth, false, flagDisableAuthDescription)
 	rootCmd.Flags().Bool(flagDemoMode, false, flagDemoModeDescription)
+	rootCmd.Flags().Bool(flagGracefulStart, false, flagGracefulStartDescription)
 	rootCmd.Flags().StringVar(&customCssFile, flagCustomCss, "", flagCustomCssDescription)
 }
 
@@ -168,6 +169,14 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	// print version
 	log.INFO.Printf("evcc %s", util.FormattedVersion())
+
+	// evcc-ng: opt-in graceful startup (evcc-io/evcc#14496). When enabled,
+	// chargers/meters that fail to initialize are wrapped as offline instead
+	// of forcing the whole site into failsafe + restart loop.
+	if ok, _ := cmd.Flags().GetBool(flagGracefulStart); ok {
+		log.INFO.Println("graceful start enabled: unreachable chargers/meters won't block startup")
+		gracefulStart = true
+	}
 
 	// load config and re-configure logging after reading config file
 	var err error

@@ -19,7 +19,7 @@ Features (backend + UI unless noted):
 - #6144 vehicle SoC start/end in charge log (`core/session/`, Sessions UI)
 - #14661 per-phase 1p/3p current limits (`core/loadpoint*`, settings modal)
 - #21747 zero feed-in / PV curtailment on negative prices (`core/site*`, forecast view)
-- #14496 graceful startup when a charger/meter fails to init (`charger/wrapper.go`, `meter/wrapper.go`, `cmd/setup.go`, offline badge on loadpoint card)
+- #14496 graceful startup when a charger/meter fails to init — opt-in via `--graceful-start` (default off keeps upstream failsafe + fatal banner so the config-fatals e2e test passes). When on: failing devices wrap as offline (`charger/wrapper.go`, `meter/wrapper.go`, `cmd/setup.go`) and the loadpoint card shows an offline badge.
 
 Conventions: Go tests via `make test` (or `CGO_ENABLED=0 go test ./...`),
 UI via `npm run lint` (eslint+vue-tsc) + `npm test`. New i18n strings go in

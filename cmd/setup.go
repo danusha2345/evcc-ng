@@ -299,6 +299,27 @@ type newFromConfFunc[T any] func(context.Context, string, map[string]any) (T, er
 // to initialize. Returning nil disables wrapping (legacy fatal behaviour).
 type deviceWrapper[T any] func(name, typ string, other map[string]any, err error) T
 
+// gracefulStart, when enabled via --graceful-start, makes failing
+// chargers/meters wrap as offline instead of triggering failsafe + restart
+// (evcc-ng, evcc-io/evcc#14496). Default off preserves upstream behaviour.
+var gracefulStart bool
+
+// chargerWrapper returns the offline wrapper only when graceful start is on.
+func chargerWrapper() deviceWrapper[api.Charger] {
+	if gracefulStart {
+		return charger.NewWrapper
+	}
+	return nil
+}
+
+// meterWrapper returns the offline wrapper only when graceful start is on.
+func meterWrapper() deviceWrapper[api.Meter] {
+	if gracefulStart {
+		return meter.NewWrapper
+	}
+	return nil
+}
+
 func staticInstance[T any](typ string, cc config.Named, newFromConf newFromConfFunc[T], h config.Handler[T], wrap deviceWrapper[T]) error {
 	ctx, cancel := context.WithCancel(util.WithLogger(context.TODO(), util.NewLogger(cc.Name))) //nolint:govet
 
@@ -392,7 +413,7 @@ func configureMeters(static []config.Named, names ...string) error {
 		}
 
 		eg.Go(func() error {
-			return staticInstance("meter", cc, meter.NewFromConfig, config.Meters(), meter.NewWrapper)
+			return staticInstance("meter", cc, meter.NewFromConfig, config.Meters(), meterWrapper())
 		})
 	}
 
@@ -411,7 +432,7 @@ func configureMeters(static []config.Named, names ...string) error {
 				return nil
 			}
 
-			return configurableInstance("meter", &conf, meter.NewFromConfig, config.Meters(), meter.NewWrapper)
+			return configurableInstance("meter", &conf, meter.NewFromConfig, config.Meters(), meterWrapper())
 		})
 	}
 
@@ -436,7 +457,7 @@ func configureChargers(static []config.Named, names ...string) error {
 		}
 
 		eg.Go(func() error {
-			return staticInstance("charger", cc, charger.NewFromConfig, config.Chargers(), charger.NewWrapper)
+			return staticInstance("charger", cc, charger.NewFromConfig, config.Chargers(), chargerWrapper())
 		})
 	}
 
@@ -455,7 +476,7 @@ func configureChargers(static []config.Named, names ...string) error {
 				return nil
 			}
 
-			return configurableInstance("charger", &conf, charger.NewFromConfig, config.Chargers(), charger.NewWrapper)
+			return configurableInstance("charger", &conf, charger.NewFromConfig, config.Chargers(), chargerWrapper())
 		})
 	}
 

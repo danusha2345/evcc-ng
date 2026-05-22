@@ -25,6 +25,9 @@ const (
 	flagDisableAuth            = "disable-auth"
 	flagDisableAuthDescription = "Disable authentication (dangerous)"
 
+	flagGracefulStart            = "graceful-start"
+	flagGracefulStartDescription = "Keep running if a charger or meter is unreachable at startup instead of entering failsafe (evcc-ng, evcc-io/evcc#14496)"
+
 	flagCustomCss            = "custom-css"
 	flagCustomCssDescription = "Additional user-defined CSS file for custom styling. No compatibility guarantees."
 
