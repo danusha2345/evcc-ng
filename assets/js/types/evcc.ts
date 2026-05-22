@@ -108,6 +108,9 @@ export interface State {
   bufferStartSoc?: number;
   batteryDischargeControl?: boolean;
   batteryGridChargeLimit?: number | null;
+  feedInControl?: boolean;
+  feedInControlThreshold?: number;
+  feedInControlAvailable?: boolean;
   smartCostAvailable?: boolean;
   smartCostType?: SMART_COST_TYPE;
   siteTitle?: string;

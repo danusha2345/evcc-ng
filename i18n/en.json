@@ -975,6 +975,11 @@
       "setup": "Set up tariffs and forecasts",
       "solar": "See expected solar production for today and the coming days. Will also be used for automatic charging optimization in the future."
     },
+    "feedInControl": {
+      "description": "Curtail PV production when the feed-in price drops below the threshold (e.g. negative prices). Requires an inverter that supports curtailment.",
+      "label": "Stop feeding in when unprofitable",
+      "threshold": "Price threshold"
+    },
     "hideLine": "hide line",
     "modalTitle": "Forecast",
     "price": {

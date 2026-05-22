@@ -975,6 +975,11 @@
       "setup": "Tarife und Vorhersagen einrichten",
       "solar": "Erwartete Solarproduktion für heute und die nächsten Tage. Wird in Zukunft auch für die automatische Ladeoptimierung verwendet."
     },
+    "feedInControl": {
+      "description": "PV-Erzeugung drosseln, wenn der Einspeisepreis unter den Schwellwert fällt (z. B. negative Preise). Benötigt einen Wechselrichter mit Drosselungs-Unterstützung.",
+      "label": "Einspeisung stoppen, wenn unrentabel",
+      "threshold": "Preisschwelle"
+    },
     "hideLine": "Linie ausblenden",
     "modalTitle": "Vorhersage",
     "price": {

@@ -116,6 +116,42 @@
 						:show-feedin="showFeedin"
 						@toggle-feedin="toggleFeedin"
 					/>
+
+					<div v-if="feedInControlAvailable" class="mt-4">
+						<div class="form-check form-switch mb-1">
+							<input
+								id="feedInControl"
+								:checked="feedInControlEnabled"
+								class="form-check-input"
+								type="checkbox"
+								role="switch"
+								@change="toggleFeedInControl"
+							/>
+							<label class="form-check-label" for="feedInControl">
+								{{ $t("forecast.feedInControl.label") }}
+							</label>
+						</div>
+						<p class="text-muted small mb-2">
+							{{ $t("forecast.feedInControl.description") }}
+						</p>
+						<div
+							v-if="feedInControlEnabled"
+							class="d-flex align-items-center ms-4 mb-2"
+						>
+							<label for="feedInControlThreshold" class="me-2 text-nowrap">
+								{{ $t("forecast.feedInControl.threshold") }}
+							</label>
+							<input
+								id="feedInControlThreshold"
+								:value="feedInControlThreshold"
+								type="number"
+								step="0.01"
+								class="form-control form-control-sm w-auto"
+								@change="setFeedInControlThreshold"
+							/>
+							<span class="ms-2 text-muted text-nowrap">{{ currency }}/kWh</span>
+						</div>
+					</div>
 				</section>
 
 				<section v-if="forecast.co2" class="mb-5">
@@ -151,6 +187,7 @@ import Co2Details from "../components/Forecast/Co2Details.vue";
 import formatter from "@/mixins/formatter";
 import settings from "@/settings";
 import store from "../store";
+import api from "@/api";
 import { adjustedSolar, ForecastType, isStaticTariff } from "@/utils/forecast";
 
 const MIN_HOURS = 76;
@@ -234,6 +271,15 @@ export default defineComponent({
 		showFeedin() {
 			return !settings.hideFeedin;
 		},
+		feedInControlAvailable() {
+			return !!store.state?.feedInControlAvailable;
+		},
+		feedInControlEnabled() {
+			return !!store.state?.feedInControl;
+		},
+		feedInControlThreshold() {
+			return store.state?.feedInControlThreshold ?? 0;
+		},
 		isGridStatic(): boolean {
 			if (!this.forecast.grid) return false;
 			if (!isStaticTariff(this.forecast.grid)) return false;
@@ -272,6 +318,16 @@ export default defineComponent({
 		},
 		toggleFeedin() {
 			settings.hideFeedin = !settings.hideFeedin;
+		},
+		toggleFeedInControl(e: Event) {
+			const on = (e.target as HTMLInputElement).checked;
+			api.post(`feedincontrol/${on ? "true" : "false"}`);
+		},
+		setFeedInControlThreshold(e: Event) {
+			const value = Number((e.target as HTMLInputElement).value);
+			if (!Number.isNaN(value)) {
+				api.post(`feedincontrolthreshold/${value}`);
+			}
 		},
 		onChartScroll(val: number) {
 			if (this.isScrolling) return;

@@ -58,4 +58,5 @@ const (
 	// PV feed-in control (curtail PV when grid export is unprofitable)
 	FeedInControl          = "feedInControl"          // enable curtailing PV when feed-in price drops below threshold
 	FeedInControlThreshold = "feedInControlThreshold" // price threshold (per kWh) below which curtailment is triggered
+	FeedInControlAvailable = "feedInControlAvailable" // at least one PV meter supports curtailment
 )

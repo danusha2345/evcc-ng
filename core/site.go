@@ -1061,6 +1061,7 @@ func (site *Site) prepare() {
 	site.publish(keys.BatteryDischargeControl, site.batteryDischargeControl)
 	site.publish(keys.FeedInControl, site.feedInControl)
 	site.publish(keys.FeedInControlThreshold, site.feedInControlThreshold)
+	site.publish(keys.FeedInControlAvailable, site.hasPVCurtailer())
 	site.publish(keys.ResidualPower, site.GetResidualPower())
 	site.publish(keys.SmartCostAvailable, site.isDynamicTariff(api.TariffUsagePlanner))
 	site.publish(keys.SmartFeedInPriorityAvailable, site.isDynamicTariff(api.TariffUsageFeedIn))
