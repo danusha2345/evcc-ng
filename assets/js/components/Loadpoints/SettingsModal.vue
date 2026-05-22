@@ -124,6 +124,138 @@
 					</select>
 				</div>
 			</div>
+
+			<div v-if="phaseSwitchingPossible" class="mb-3 row">
+				<label :for="formId('perphase')" class="col-sm-4 col-form-label pt-0 pt-sm-2">
+					{{ $t("main.loadpointSettings.perPhase.label") }}
+				</label>
+				<div class="col-sm-8 col-lg-4 pe-0 d-flex align-items-center">
+					<div class="form-check form-switch">
+						<input
+							:id="formId('perphase')"
+							v-model="showPerPhase"
+							class="form-check-input"
+							type="checkbox"
+							role="switch"
+							@change="togglePerPhase"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<template v-if="phaseSwitchingPossible && showPerPhase">
+				<div class="mb-3 row align-items-center">
+					<label
+						:for="formId('mincurrent1p')"
+						class="col-sm-4 col-form-label pt-0 pt-sm-2 ps-4"
+					>
+						{{ $t("main.loadpointSettings.perPhase.min1p") }}
+					</label>
+					<div class="col-sm-8 col-lg-4 pe-0 d-flex align-items-center">
+						<select
+							:id="formId('mincurrent1p')"
+							v-model.number="selectedMinCurrent1p"
+							class="form-select form-select-sm"
+							@change="setPerPhase('mincurrent1p', selectedMinCurrent1p)"
+						>
+							<option :value="0">
+								{{ $t("main.loadpointSettings.perPhase.default") }}
+							</option>
+							<option
+								v-for="{ value, name } in perPhaseOptions"
+								:key="value"
+								:value="value"
+							>
+								{{ name }}
+							</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="mb-3 row align-items-center">
+					<label
+						:for="formId('maxcurrent1p')"
+						class="col-sm-4 col-form-label pt-0 pt-sm-2 ps-4"
+					>
+						{{ $t("main.loadpointSettings.perPhase.max1p") }}
+					</label>
+					<div class="col-sm-8 col-lg-4 pe-0 d-flex align-items-center">
+						<select
+							:id="formId('maxcurrent1p')"
+							v-model.number="selectedMaxCurrent1p"
+							class="form-select form-select-sm"
+							@change="setPerPhase('maxcurrent1p', selectedMaxCurrent1p)"
+						>
+							<option :value="0">
+								{{ $t("main.loadpointSettings.perPhase.default") }}
+							</option>
+							<option
+								v-for="{ value, name } in perPhaseOptions"
+								:key="value"
+								:value="value"
+							>
+								{{ name }}
+							</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="mb-3 row align-items-center">
+					<label
+						:for="formId('mincurrent3p')"
+						class="col-sm-4 col-form-label pt-0 pt-sm-2 ps-4"
+					>
+						{{ $t("main.loadpointSettings.perPhase.min3p") }}
+					</label>
+					<div class="col-sm-8 col-lg-4 pe-0 d-flex align-items-center">
+						<select
+							:id="formId('mincurrent3p')"
+							v-model.number="selectedMinCurrent3p"
+							class="form-select form-select-sm"
+							@change="setPerPhase('mincurrent3p', selectedMinCurrent3p)"
+						>
+							<option :value="0">
+								{{ $t("main.loadpointSettings.perPhase.default") }}
+							</option>
+							<option
+								v-for="{ value, name } in perPhaseOptions"
+								:key="value"
+								:value="value"
+							>
+								{{ name }}
+							</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="mb-3 row align-items-center">
+					<label
+						:for="formId('maxcurrent3p')"
+						class="col-sm-4 col-form-label pt-0 pt-sm-2 ps-4"
+					>
+						{{ $t("main.loadpointSettings.perPhase.max3p") }}
+					</label>
+					<div class="col-sm-8 col-lg-4 pe-0 d-flex align-items-center">
+						<select
+							:id="formId('maxcurrent3p')"
+							v-model.number="selectedMaxCurrent3p"
+							class="form-select form-select-sm"
+							@change="setPerPhase('maxcurrent3p', selectedMaxCurrent3p)"
+						>
+							<option :value="0">
+								{{ $t("main.loadpointSettings.perPhase.default") }}
+							</option>
+							<option
+								v-for="{ value, name } in perPhaseOptions"
+								:key="value"
+								:value="value"
+							>
+								{{ name }}
+							</option>
+						</select>
+					</div>
+				</div>
+			</template>
 		</div>
 	</GenericModal>
 </template>
@@ -182,6 +314,11 @@ export default defineComponent({
 			selectedMinCurrent: undefined as number | undefined,
 			selectedPhases: undefined as number | undefined,
 			isModalVisible: false,
+			showPerPhase: false,
+			selectedMinCurrent1p: 0,
+			selectedMaxCurrent1p: 0,
+			selectedMinCurrent3p: 0,
+			selectedMaxCurrent3p: 0,
 		};
 	},
 	computed: {
@@ -193,6 +330,29 @@ export default defineComponent({
 		},
 		minCurrent() {
 			return this.loadpoint?.minCurrent;
+		},
+		minCurrent1p() {
+			return this.loadpoint?.minCurrent1p ?? null;
+		},
+		maxCurrent1p() {
+			return this.loadpoint?.maxCurrent1p ?? null;
+		},
+		minCurrent3p() {
+			return this.loadpoint?.minCurrent3p ?? null;
+		},
+		maxCurrent3p() {
+			return this.loadpoint?.maxCurrent3p ?? null;
+		},
+		// per-phase limits only make sense on chargers that can switch 1p<->3p
+		phaseSwitchingPossible() {
+			return !!this.loadpoint?.chargerPhases1p3p;
+		},
+		// full current range, used for all four per-phase selects
+		perPhaseOptions() {
+			return range(MAX_CURRENT, 1).map((value) => ({
+				value,
+				name: `${this.fmtNumber(value, undefined)} A`,
+			}));
 		},
 		batteryBoostLimit() {
 			return this.loadpoint?.batteryBoostLimit;
@@ -252,6 +412,18 @@ export default defineComponent({
 		phasesConfigured(value) {
 			this.selectedPhases = value;
 		},
+		minCurrent1p(value) {
+			this.selectedMinCurrent1p = value ?? 0;
+		},
+		maxCurrent1p(value) {
+			this.selectedMaxCurrent1p = value ?? 0;
+		},
+		minCurrent3p(value) {
+			this.selectedMinCurrent3p = value ?? 0;
+		},
+		maxCurrent3p(value) {
+			this.selectedMaxCurrent3p = value ?? 0;
+		},
 	},
 	methods: {
 		open(loadpointId: string) {
@@ -259,6 +431,16 @@ export default defineComponent({
 			this.selectedPhases = this.phasesConfigured;
 			this.selectedMaxCurrent = this.maxCurrent;
 			this.selectedMinCurrent = this.minCurrent;
+			this.selectedMinCurrent1p = this.minCurrent1p ?? 0;
+			this.selectedMaxCurrent1p = this.maxCurrent1p ?? 0;
+			this.selectedMinCurrent3p = this.minCurrent3p ?? 0;
+			this.selectedMaxCurrent3p = this.maxCurrent3p ?? 0;
+			// expand the per-phase section if any override is already set
+			this.showPerPhase =
+				!!this.minCurrent1p ||
+				!!this.maxCurrent1p ||
+				!!this.minCurrent3p ||
+				!!this.maxCurrent3p;
 			const modalRef = this.$refs["modal"] as InstanceType<typeof GenericModal> | undefined;
 			modalRef?.open();
 		},
@@ -279,6 +461,27 @@ export default defineComponent({
 		},
 		setPhasesConfigured() {
 			api.post(this.apiPath("phases") + "/" + this.selectedPhases);
+		},
+		// setPerPhase posts a per-phase override, or DELETEs it when set to the
+		// "default" sentinel (0) so the loadpoint falls back to its global min/max
+		setPerPhase(func: string, value: number) {
+			if (value > 0) {
+				api.post(this.apiPath(func) + "/" + value);
+			} else {
+				api.delete(this.apiPath(func));
+			}
+		},
+		// togglePerPhase clears all four overrides when the section is switched off
+		togglePerPhase() {
+			if (!this.showPerPhase) {
+				this.selectedMinCurrent1p = 0;
+				this.selectedMaxCurrent1p = 0;
+				this.selectedMinCurrent3p = 0;
+				this.selectedMaxCurrent3p = 0;
+				["mincurrent1p", "maxcurrent1p", "mincurrent3p", "maxcurrent3p"].forEach((func) =>
+					api.delete(this.apiPath(func))
+				);
+			}
 		},
 		setBatteryBoostLimit(limit: number) {
 			api.post(this.apiPath("batteryboostlimit") + "/" + limit);

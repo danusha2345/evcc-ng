@@ -1257,6 +1257,14 @@
         "label": "Min. Ladung %"
       },
       "onlyForSocBasedCharging": "Diese Optionen sind nur für Fahrzeuge mit bekanntem Ladestand verfügbar.",
+      "perPhase": {
+        "default": "Standard",
+        "label": "Getrennte Limits für 1p/3p",
+        "max1p": "Max. Strom 1-phasig",
+        "max3p": "Max. Strom 3-phasig",
+        "min1p": "Min. Strom 1-phasig",
+        "min3p": "Min. Strom 3-phasig"
+      },
       "phasesConfigured": {
         "label": "Phasen",
         "no1p3pSupport": "Wie ist deine Wallbox angeschlossen?",

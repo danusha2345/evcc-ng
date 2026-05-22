@@ -1257,6 +1257,14 @@
         "label": "Min. charge %"
       },
       "onlyForSocBasedCharging": "These options are only available for vehicles with known charging level.",
+      "perPhase": {
+        "default": "default",
+        "label": "Different limits for 1p/3p",
+        "max1p": "Max. current 1-phase",
+        "max3p": "Max. current 3-phase",
+        "min1p": "Min. current 1-phase",
+        "min3p": "Min. current 3-phase"
+      },
       "phasesConfigured": {
         "label": "Phases",
         "no1p3pSupport": "How is your charger connected?",

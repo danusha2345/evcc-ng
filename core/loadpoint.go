@@ -685,6 +685,10 @@ func (lp *Loadpoint) Prepare(site site.API, uiChan chan<- util.Param, pushChan c
 	lp.publish(keys.Priority, lp.GetPriority())
 	lp.publish(keys.MinCurrent, lp.GetMinCurrent())
 	lp.publish(keys.MaxCurrent, lp.GetMaxCurrent())
+	lp.publish(keys.MinCurrent1p, lp.GetMinCurrent1p())
+	lp.publish(keys.MaxCurrent1p, lp.GetMaxCurrent1p())
+	lp.publish(keys.MinCurrent3p, lp.GetMinCurrent3p())
+	lp.publish(keys.MaxCurrent3p, lp.GetMaxCurrent3p())
 
 	lp.publish(keys.EnableThreshold, lp.Enable.Threshold)
 	lp.publish(keys.DisableThreshold, lp.Disable.Threshold)

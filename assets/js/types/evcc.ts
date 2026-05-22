@@ -295,6 +295,10 @@ export interface Loadpoint {
   limitSoc: number;
   maxCurrent: number;
   minCurrent: number;
+  minCurrent1p: number | null;
+  maxCurrent1p: number | null;
+  minCurrent3p: number | null;
+  maxCurrent3p: number | null;
   minSocNotReached: boolean;
   mode: CHARGE_MODE;
   offeredCurrent: number;
