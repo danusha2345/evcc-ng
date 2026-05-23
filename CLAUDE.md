@@ -11,7 +11,7 @@ Bug fixes:
 - #29922 race on `POST /api/vehicles/{id}/plan/strategy` — per-vehicle mutex (`server/http_vehicle_handler.go`)
 - #29864 Peugeot/PSA `evcc token` bootstrap — skip validating instantiation (`cmd/token.go`)
 - #30006 Hyundai 12V drain — passive vehicle test polling (`server/http_config_helper.go`)
-- #28652 Tesla vehicle-api wakeup on `ErrAsleep` (`core/loadpoint.go`)
+- #28652 Tesla vehicle-api wakeup on `ErrAsleep` — only wakes a connected vehicle (`lp.connected()` guard) so a car that drove off isn't woken repeatedly / drained (`core/loadpoint.go`)
 - #29682 solar forecast interval safety floors (`tariff/tariff.go`)
 - #14418 EEBus/Elli loadpoint minCurrent respected (`core/loadpoint_effective.go`)
 
@@ -20,6 +20,8 @@ Features (backend + UI unless noted):
 - #14661 per-phase 1p/3p current limits (`core/loadpoint*`, settings modal)
 - #21747 zero feed-in / PV curtailment on negative prices (`core/site*`, forecast view)
 - #14496 graceful startup when a charger/meter fails to init — opt-in via `--graceful-start` (default off keeps upstream failsafe + fatal banner so the config-fatals e2e test passes). When on: failing devices wrap as offline (`charger/wrapper.go`, `meter/wrapper.go`, `cmd/setup.go`) and the loadpoint card shows an offline badge.
+- #19649 current forecasted solar power ("Now") in forecast view (`assets/js/components/Forecast/SolarDetails.vue`)
+- #30068 don't erase external PV limits when not managing curtailment (`core/site.go` — gate curtailPV on circuit or feed-in control)
 
 Conventions: Go tests via `make test` (or `CGO_ENABLED=0 go test ./...`),
 UI via `npm run lint` (eslint+vue-tsc) + `npm test`. New i18n strings go in
