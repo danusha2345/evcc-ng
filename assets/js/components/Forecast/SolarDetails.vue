@@ -1,17 +1,27 @@
 <template>
-	<div v-if="days.length" class="row gx-2 mt-1">
-		<div v-for="day in days" :key="day.key" class="col-4" :class="`text-${day.align}`">
+	<div v-if="days.length">
+		<div v-if="currentPower !== null" class="mb-2">
 			<small>
-				<span class="text-gray">{{ day.label }}</span>
-				<br />
-				<div
-					class="d-flex flex-column flex-md-row column-gap-2"
-					:class="`justify-content-md-${day.align}`"
-				>
-					<span class="text-primary fw-bold">{{ day.energy }}</span>
-					<span v-if="day.note" class="text-gray">{{ day.note }}</span>
-				</div>
+				<span class="text-gray">{{ $t("forecast.solar.now") }}</span>
+				<span class="text-primary fw-bold ms-2">{{
+					fmtW(currentPower, POWER_UNIT.AUTO)
+				}}</span>
 			</small>
+		</div>
+		<div class="row gx-2 mt-1">
+			<div v-for="day in days" :key="day.key" class="col-4" :class="`text-${day.align}`">
+				<small>
+					<span class="text-gray">{{ day.label }}</span>
+					<br />
+					<div
+						class="d-flex flex-column flex-md-row column-gap-2"
+						:class="`justify-content-md-${day.align}`"
+					>
+						<span class="text-primary fw-bold">{{ day.energy }}</span>
+						<span v-if="day.note" class="text-gray">{{ day.note }}</span>
+					</div>
+				</small>
+			</div>
 		</div>
 	</div>
 </template>
@@ -28,6 +38,24 @@ export default defineComponent({
 		solar: { type: Object as PropType<SolarDetails> },
 	},
 	computed: {
+		// currentPower returns the forecasted solar power for the current
+		// time slot (evcc-io/evcc#19649), or null if no timeseries is
+		// available. timeseries is ordered; we take the last slot whose
+		// timestamp is at or before now.
+		currentPower(): number | null {
+			const ts = this.solar?.timeseries;
+			if (!ts?.length) return null;
+			const now = Date.now();
+			let current: number | null = null;
+			for (const e of ts) {
+				if (new Date(e.ts).getTime() <= now) {
+					current = e.val;
+				} else {
+					break;
+				}
+			}
+			return current;
+		},
 		days(): {
 			key: string;
 			energy: string;

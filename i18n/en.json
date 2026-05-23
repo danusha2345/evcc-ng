@@ -992,6 +992,7 @@
     "showLine": "show line",
     "solar": {
       "dayAfterTomorrow": "Day after tomorrow",
+      "now": "Now",
       "partly": "partly",
       "remaining": "remaining",
       "today": "Today",
