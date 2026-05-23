@@ -969,12 +969,17 @@ func (site *Site) update(lp updater) {
 		}
 	}
 
-	// curtail PV when either EEG §9 circuit dimming OR feed-in price drops
-	// below threshold. Runs every tick regardless of whether a circuit is
-	// configured (evcc-io/evcc#21747).
-	curtail := site.shouldFeedInCurtail() || (site.circuit != nil && circuitCurtailed(site.circuit))
-	if err := site.curtailPV(curtail); err != nil {
-		site.log.ERROR.Println(err)
+	// Curtail PV on EEG §9 circuit dimming OR feed-in price below threshold.
+	// Only touch the inverter's curtail registers when we actually manage
+	// curtailment (a circuit is configured, or feed-in control is enabled).
+	// Otherwise leave them alone so an external/static limit — e.g. Huawei's
+	// 70% cap set via FusionSolar on the same registers — is not erased
+	// (evcc-io/evcc#21747, #30068).
+	if site.circuit != nil || site.GetFeedInControl() {
+		curtail := site.shouldFeedInCurtail() || (site.circuit != nil && circuitCurtailed(site.circuit))
+		if err := site.curtailPV(curtail); err != nil {
+			site.log.ERROR.Println(err)
+		}
 	}
 
 	// prioritize if possible
