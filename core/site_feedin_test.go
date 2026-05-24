@@ -26,20 +26,21 @@ func mockFeedInTariff(t *testing.T, price float64) api.Tariff {
 }
 
 func TestShouldFeedInCurtail(t *testing.T) {
+	ptr := func(b bool) *bool { return &b }
 	for _, tc := range []struct {
 		name      string
 		enabled   bool
 		threshold float64
 		tariff    api.Tariff
-		want      bool
+		want      *bool // nil = not managed (leave registers alone)
 	}{
-		{name: "disabled", enabled: false, want: false},
-		{name: "enabled no tariff", enabled: true, want: false},
-		{name: "price above threshold", enabled: true, threshold: 0, tariff: mockFeedInTariff(t, 0.05), want: false},
-		{name: "price at threshold (curtail)", enabled: true, threshold: 0, tariff: mockFeedInTariff(t, 0), want: true},
-		{name: "price below zero threshold", enabled: true, threshold: 0, tariff: mockFeedInTariff(t, -0.02), want: true},
-		{name: "negative threshold not yet hit", enabled: true, threshold: -0.05, tariff: mockFeedInTariff(t, -0.02), want: false},
-		{name: "negative threshold hit", enabled: true, threshold: -0.05, tariff: mockFeedInTariff(t, -0.10), want: true},
+		{name: "disabled", enabled: false, want: nil},
+		{name: "enabled no tariff", enabled: true, want: nil},
+		{name: "price above threshold", enabled: true, threshold: 0, tariff: mockFeedInTariff(t, 0.05), want: ptr(false)},
+		{name: "price at threshold (curtail)", enabled: true, threshold: 0, tariff: mockFeedInTariff(t, 0), want: ptr(true)},
+		{name: "price below zero threshold", enabled: true, threshold: 0, tariff: mockFeedInTariff(t, -0.02), want: ptr(true)},
+		{name: "negative threshold not yet hit", enabled: true, threshold: -0.05, tariff: mockFeedInTariff(t, -0.02), want: ptr(false)},
+		{name: "negative threshold hit", enabled: true, threshold: -0.05, tariff: mockFeedInTariff(t, -0.10), want: ptr(true)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &Site{
