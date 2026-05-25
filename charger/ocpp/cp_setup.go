@@ -13,16 +13,11 @@ import (
 	"github.com/samber/lo"
 )
 
-func (cp *CP) Setup(ctx context.Context, meterValues string, meterInterval time.Duration, forcePowerCtrl bool) error {
-	if err := cp.ChangeAvailabilityRequest(0, core.AvailabilityTypeOperative); err != nil {
-		cp.log.DEBUG.Printf("failed configuring availability: %v", err)
-	}
-
-	// Some chargers (e.g. EN+/EVSEDO FW 1.1.805, issue #30113) hang on ChangeAvailability
-	// and drop the WebSocket. Without this, every subsequent request fails with
-	// "no client exists" and aborts charger creation fatally.
-	if err := cp.waitConnected(ctx); err != nil {
-		return err
+func (cp *CP) Setup(ctx context.Context, meterValues string, meterInterval time.Duration, forcePowerCtrl, noChangeAvailability bool) error {
+	if !noChangeAvailability {
+		if err := cp.ChangeAvailabilityRequest(0, core.AvailabilityTypeOperative); err != nil {
+			cp.log.DEBUG.Printf("failed configuring availability: %v", err)
+		}
 	}
 
 	// auto configuration
