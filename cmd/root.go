@@ -253,6 +253,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	// signal ui listening
 	valueChan <- util.Param{Key: keys.StartupCompleted, Val: false}
+	valueChan <- util.Param{Key: keys.ApiReady, Val: false}
 
 	// metrics
 	if viper.GetBool("metrics") {
@@ -472,6 +473,9 @@ func runRoot(cmd *cobra.Command, args []string) {
 			site.Run(stopC, conf.Interval)
 		}()
 	}
+
+	// signal HTTP API ready
+	valueChan <- util.Param{Key: keys.ApiReady, Val: true}
 
 	if err != nil {
 		if uw, ok := err.(interface{ Unwrap() []error }); ok {
