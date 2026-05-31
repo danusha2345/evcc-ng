@@ -3,7 +3,7 @@
 Fork of `evcc-io/evcc` focused on fixing long-standing backlog issues and
 adding top-voted features. Origin: `danusha2345/evcc-ng`. Sync `master` with
 upstream periodically by **merge** (not rebase — branch protection blocks
-force-push). Releases tagged `0.307.0-ngN`; latest is `0.307.0-ng6`.
+force-push). Releases tagged `0.307.0-ngN`; latest is `0.307.0-ng7`.
 Donations: a Boosty link in the README, nothing more.
 
 Upstream PRs are NOT welcome here — the maintainer rejected our submissions as
