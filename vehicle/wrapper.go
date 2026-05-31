@@ -18,6 +18,17 @@ type Wrapper struct {
 
 // NewWrapper creates an offline Vehicle wrapper
 func NewWrapper(name, typ string, other map[string]any, err error) api.Vehicle {
+	return newWrapper(name, typ, other, fmt.Errorf("vehicle not available: %w", err), false)
+}
+
+// NewDisabledWrapper creates a quiet offline stub for a vehicle the user
+// intentionally disabled. Unlike NewWrapper it is not Retryable, so the retry
+// loop never revives it — re-enabling is a manual action (evcc-io/evcc#21144).
+func NewDisabledWrapper(name, typ string, other map[string]any) api.Vehicle {
+	return newWrapper(name, typ, other, api.ErrNotAvailable, true)
+}
+
+func newWrapper(name, typ string, other map[string]any, err error, disabled bool) api.Vehicle {
 	var cc struct {
 		embed `mapstructure:",squash"`
 		Other map[string]any `mapstructure:",remain"`
@@ -35,10 +46,15 @@ func NewWrapper(name, typ string, other map[string]any, err error) api.Vehicle {
 		embed:  cc.embed,
 		typ:    typ,
 		config: cc.Other,
-		err:    fmt.Errorf("vehicle not available: %w", err),
+		err:    err,
 	}
 
-	v.Features_ = append(v.Features_, api.Offline, api.Retryable)
+	// disabled stubs are deliberately not Retryable so the retry loop leaves
+	// them offline until the user re-enables them (evcc-io/evcc#21144)
+	v.Features_ = append(v.Features_, api.Offline)
+	if !disabled {
+		v.Features_ = append(v.Features_, api.Retryable)
+	}
 	v.SetTitle(cc.Title_)
 
 	return v

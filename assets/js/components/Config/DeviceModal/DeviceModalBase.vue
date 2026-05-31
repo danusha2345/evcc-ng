@@ -153,6 +153,22 @@
 					</div>
 				</div>
 
+				<div v-if="showActions && !isNew" class="form-check form-switch mb-4">
+					<input
+						id="deviceActive"
+						v-model="deviceActive"
+						class="form-check-input"
+						type="checkbox"
+						role="switch"
+					/>
+					<div class="form-check-label">
+						<label for="deviceActive">{{ $t("config.general.deviceActive") }}</label>
+						<small class="d-block text-muted">{{
+							$t("config.general.deviceActiveHint")
+						}}</small>
+					</div>
+				</div>
+
 				<DeviceModalActions
 					v-if="showActions"
 					:is-deletable="isDeletable"
@@ -367,6 +383,15 @@ export default defineComponent({
 			const requirements = this.template?.Requirements as any;
 			return requirements?.EVCC?.includes("sponsorship") && !this.isSponsor;
 		},
+		deviceActive: {
+			// switch shows "active"; the stored Property is the inverse (disabled)
+			get(): boolean {
+				return !this.values.disabled;
+			},
+			set(value: boolean) {
+				this.values.disabled = !value;
+			},
+		},
 		apiData(): ApiData {
 			let data: ApiData = {
 				...this.modbusDefaults,
@@ -566,6 +591,8 @@ export default defineComponent({
 				if (device.deviceIcon !== undefined) {
 					this.values.deviceIcon = device.deviceIcon;
 				}
+				// absent means active; propsToMap omits a false "disabled"
+				this.values.disabled = device.disabled === true;
 				this.applyDefaults();
 				this.templateName = this.values.template;
 

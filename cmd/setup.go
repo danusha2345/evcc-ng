@@ -395,6 +395,18 @@ func configurableInstance[T any](typ string, conf *config.Config, newFromConf ne
 	return err //nolint:govet
 }
 
+// disabledInstance adds a quiet offline stub for an intentionally disabled
+// device. The stub does no I/O and produces no log noise, yet keeps the device
+// visible (so it can be re-enabled) and lets references to it resolve, so the
+// site still starts. Independent of --graceful-start (evcc-io/evcc#21144).
+func disabledInstance[T any](conf *config.Config, newDisabled func(name, typ string, other map[string]any) T, h config.Handler[T]) error {
+	cc := conf.Named()
+	if e := h.Add(config.NewConfigurableDevice(conf, newDisabled(cc.Name, cc.Type, cc.Other))); e != nil {
+		return &DeviceError{cc.Name, e}
+	}
+	return nil
+}
+
 func configureMeters(static []config.Named, names ...string) error {
 	var eg errgroup.Group
 
@@ -426,6 +438,11 @@ func configureMeters(static []config.Named, names ...string) error {
 	for _, conf := range configurable {
 		eg.Go(func() error {
 			cc := conf.Named()
+
+			// intentionally disabled: quiet offline stub (evcc-io/evcc#21144)
+			if conf.Disabled {
+				return disabledInstance(&conf, meter.NewDisabledWrapper, config.Meters())
+			}
 
 			// always skip unreferenced db devices
 			if !slices.Contains(names, cc.Name) {
@@ -470,6 +487,11 @@ func configureChargers(static []config.Named, names ...string) error {
 	for _, conf := range configurable {
 		eg.Go(func() error {
 			cc := conf.Named()
+
+			// intentionally disabled: quiet offline stub (evcc-io/evcc#21144)
+			if conf.Disabled {
+				return disabledInstance(&conf, charger.NewDisabledWrapper, config.Chargers())
+			}
 
 			// always skip unreferenced db devices
 			if !slices.Contains(names, cc.Name) {
@@ -558,6 +580,14 @@ func configureVehicles(static []config.Named, names ...string) error {
 	for _, conf := range configurable {
 		eg.Go(func() error {
 			cc := conf.Named()
+
+			// intentionally disabled: quiet offline stub (evcc-io/evcc#21144)
+			if conf.Disabled {
+				mu.Lock()
+				defer mu.Unlock()
+				devs2 = append(devs2, config.NewConfigurableDevice[api.Vehicle](&conf, vehicle.NewDisabledWrapper(cc.Name, cc.Type, cc.Other)))
+				return nil
+			}
 
 			if len(names) > 0 && !slices.Contains(names, cc.Name) {
 				return nil

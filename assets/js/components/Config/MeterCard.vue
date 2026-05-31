@@ -5,6 +5,7 @@
 		:name="meter.name"
 		:editable="!!meter.id"
 		:error="hasError"
+		:inactive="meter.disabled"
 		:data-testid="meterType"
 		@edit="$emit('edit', meterType, meter.id)"
 	>

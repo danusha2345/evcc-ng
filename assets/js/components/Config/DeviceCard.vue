@@ -6,6 +6,7 @@
 			'round-box--error': error,
 			'round-box--warning': warning,
 			'root--unconfigured': unconfigured,
+			'root--inactive': inactive,
 			'root--with-tags': $slots.tags,
 		}"
 	>
@@ -18,6 +19,11 @@
 				data-bs-toggle="tooltip"
 				:title="name"
 				>{{ title }}</strong
+			>
+			<span
+				v-if="inactive"
+				class="badge rounded-pill text-bg-secondary align-self-center me-2"
+				>{{ $t("config.general.inactive") }}</span
 			>
 			<DeviceCardEditIcon
 				:editable="editable"
@@ -52,6 +58,7 @@ export default {
 		warning: Boolean,
 		noEditButton: Boolean,
 		badge: Boolean,
+		inactive: Boolean,
 	},
 	emits: ["edit"],
 	data() {
@@ -106,6 +113,9 @@ export default {
 }
 .root--with-tags {
 	min-height: 8rem;
+}
+.root--inactive {
+	opacity: 0.6;
 }
 .root--unconfigured {
 	background: none;

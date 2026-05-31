@@ -64,6 +64,7 @@
 						:name="vehicle.name"
 						:editable="vehicle.id >= 0"
 						:error="hasDeviceError('vehicle', vehicle.name)"
+						:inactive="vehicle.disabled"
 						data-testid="vehicle"
 						@edit="openModal('vehicle', { id: vehicle.id })"
 					>

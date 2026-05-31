@@ -2033,7 +2033,13 @@ func (lp *Loadpoint) Update(sitePower, batteryBoostPower float64, consumption, f
 			}
 			return
 		}
-		lp.log.ERROR.Println(err)
+		// an offline charger — intentionally disabled (evcc-io/evcc#21144) or
+		// failed under --graceful-start (evcc-io/evcc#14496) — returns its init
+		// error every cycle. Stay silent and skip control; the UI shows the
+		// offline badge via the api.Offline feature.
+		if !lp.chargerHasFeature(api.Offline) {
+			lp.log.ERROR.Println(err)
+		}
 		return
 	}
 

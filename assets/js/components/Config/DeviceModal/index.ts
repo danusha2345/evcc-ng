@@ -56,6 +56,7 @@ export type DeviceValues = {
   template: string | null;
   deviceTitle?: string;
   deviceIcon?: string;
+  disabled?: boolean;
   usage?: MeterTemplateUsage;
   heating?: boolean;
   integrateddevice?: boolean;

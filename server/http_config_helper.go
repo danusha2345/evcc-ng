@@ -68,10 +68,20 @@ func propsToMap(props config.Properties) (map[string]any, error) {
 	}
 
 	return lo.PickBy(res, func(k string, v any) bool {
-		if k == "Type" || v.(string) == "" {
+		if k == "Type" {
 			return false
 		}
-		return true
+		// omit empty strings and false bools (e.g. Disabled) so the response
+		// only carries meaningful properties; a bare v.(string) would panic on
+		// non-string fields (evcc-io/evcc#21144)
+		switch t := v.(type) {
+		case string:
+			return t != ""
+		case bool:
+			return t
+		default:
+			return true
+		}
 	}), nil
 }
 

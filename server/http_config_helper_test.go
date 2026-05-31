@@ -19,12 +19,14 @@ func TestConfigReqUnmarshal(t *testing.T) {
 		"deviceTitle": "bar",
 		"template": "foo",
 		"deviceProduct": "baz",
+		"disabled": true,
 		"property": 1}
 	`), &req))
 	assert.Equal(t, config.Properties{
-		Type:    "template",
-		Title:   "bar",
-		Product: "baz",
+		Type:     "template",
+		Title:    "bar",
+		Product:  "baz",
+		Disabled: true,
 	}, req.Properties)
 	assert.Equal(t, map[string]any{
 		"template": "foo",
@@ -34,9 +36,10 @@ func TestConfigReqUnmarshal(t *testing.T) {
 
 func TestConfigReqMarshalToMap(t *testing.T) {
 	props := config.Properties{
-		Type:    "type",
-		Title:   "title",
-		Product: "product",
+		Type:     "type",
+		Title:    "title",
+		Product:  "product",
+		Disabled: true,
 	}
 
 	res, err := propsToMap(props)
@@ -45,7 +48,28 @@ func TestConfigReqMarshalToMap(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"deviceTitle":   "title",
 		"deviceProduct": "product",
+		"disabled":      true,
 	}, res)
+}
+
+// TestConfigReqMarshalToMapDisabledFalse guards the propsToMap bool handling:
+// a false Disabled must be omitted (not surfaced) and must never panic on the
+// type assertion that previously assumed every property is a string
+// (evcc-io/evcc#21144).
+func TestConfigReqMarshalToMapDisabledFalse(t *testing.T) {
+	props := config.Properties{
+		Type:     "type",
+		Title:    "title",
+		Disabled: false,
+	}
+
+	res, err := propsToMap(props)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]any{
+		"deviceTitle": "title",
+	}, res)
+	assert.NotContains(t, res, "disabled")
 }
 
 type testStruct struct {

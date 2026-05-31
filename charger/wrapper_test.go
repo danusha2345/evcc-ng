@@ -52,3 +52,20 @@ func TestWrapper_AllMethodsReturnOriginalError(t *testing.T) {
 		assert.Equal(t, "1.2.3.4", cfg["host"])
 	})
 }
+
+// TestDisabledWrapper_OfflineNotRetryable verifies an intentionally disabled
+// device is Offline but NOT Retryable, so the retry loop never revives it —
+// re-enabling stays a manual action (evcc-io/evcc#21144).
+func TestDisabledWrapper_OfflineNotRetryable(t *testing.T) {
+	w := NewDisabledWrapper("test", "kebawh", map[string]any{"host": "1.2.3.4"})
+
+	ww, ok := w.(api.FeatureDescriber)
+	require.True(t, ok)
+	feats := ww.Features()
+	assert.Contains(t, feats, api.Offline)
+	assert.NotContains(t, feats, api.Retryable)
+
+	// methods stay quiet stubs
+	_, err := w.Enabled()
+	assert.Error(t, err)
+}

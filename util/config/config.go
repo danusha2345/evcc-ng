@@ -27,6 +27,12 @@ type Properties struct {
 	Title   string `json:"deviceTitle,omitempty" mapstructure:"deviceTitle"`
 	Icon    string `json:"deviceIcon,omitempty" mapstructure:"deviceIcon"`
 	Product string `json:"deviceProduct,omitempty" mapstructure:"deviceProduct"`
+	// Disabled keeps a device in the configuration without instantiating it at
+	// runtime — it is represented by a quiet offline stub instead (no I/O, no
+	// log noise, manual re-enable only). The zero value (false) means active,
+	// so the GORM auto-migration leaves existing devices enabled
+	// (evcc-io/evcc#21144).
+	Disabled bool `json:"disabled,omitempty" mapstructure:"disabled"`
 }
 
 // Named converts device details to named config

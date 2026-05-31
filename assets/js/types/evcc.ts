@@ -185,6 +185,7 @@ export interface Entity {
   type: string;
   id: number;
   config: Config;
+  disabled?: boolean;
 }
 
 export enum ConfigType {

@@ -12,10 +12,11 @@ import (
 // so the rest of the system can skip / retry as appropriate
 // (evcc-io/evcc#14496).
 type Wrapper struct {
-	name   string
-	typ    string
-	config map[string]any
-	err    error
+	name     string
+	typ      string
+	config   map[string]any
+	err      error
+	disabled bool // intentionally disabled by the user — not retryable
 }
 
 // NewWrapper creates an offline Meter wrapper that holds the init error.
@@ -25,6 +26,19 @@ func NewWrapper(name, typ string, other map[string]any, err error) api.Meter {
 		typ:    typ,
 		config: other,
 		err:    fmt.Errorf("meter not available: %w", err),
+	}
+}
+
+// NewDisabledWrapper creates a quiet offline stub for a device the user
+// intentionally disabled. Unlike NewWrapper it is not Retryable, so the retry
+// loop never revives it — re-enabling is a manual action (evcc-io/evcc#21144).
+func NewDisabledWrapper(name, typ string, other map[string]any) api.Meter {
+	return &Wrapper{
+		name:     name,
+		typ:      typ,
+		config:   other,
+		err:      api.ErrNotAvailable,
+		disabled: true,
 	}
 }
 
@@ -45,5 +59,8 @@ var _ api.FeatureDescriber = (*Wrapper)(nil)
 
 // Features implements the api.FeatureDescriber interface
 func (w *Wrapper) Features() []api.Feature {
+	if w.disabled {
+		return []api.Feature{api.Offline}
+	}
 	return []api.Feature{api.Offline, api.Retryable}
 }
