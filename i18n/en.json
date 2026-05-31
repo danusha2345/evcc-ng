@@ -1285,6 +1285,11 @@
         "phases_3": "3 phase",
         "phases_3_hint": "({min} to {max})"
       },
+      "priority": {
+        "highest": "highest",
+        "hint": "Higher priority gets preferred access to solar surplus.",
+        "label": "Priority"
+      },
       "smartCostCheap": "Cheap Grid Charging",
       "smartCostClean": "Clean Grid Charging",
       "title": "Settings {0}",

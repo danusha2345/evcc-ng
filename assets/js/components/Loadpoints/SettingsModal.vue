@@ -37,6 +37,24 @@
 				class="mt-2"
 				@batteryboostlimit-updated="setBatteryBoostLimit"
 			/>
+			<div v-if="multipleLoadpoints" class="mb-3 row">
+				<label :for="formId('priority')" class="col-sm-4 col-form-label pt-0 pt-sm-2">
+					{{ $t("main.loadpointSettings.priority.label") }}
+					<small class="d-block">{{ $t("main.loadpointSettings.priority.hint") }}</small>
+				</label>
+				<div class="col-sm-8 col-lg-4 pe-0 d-flex align-items-center">
+					<select
+						:id="formId('priority')"
+						v-model.number="selectedPriority"
+						class="form-select form-select-sm"
+						@change="setPriority"
+					>
+						<option v-for="{ key, name } in priorityOptions" :key="key" :value="key">
+							{{ name }}
+						</option>
+					</select>
+				</div>
+			</div>
 			<h6>
 				{{ $t("main.loadpointSettings.currents") }}
 			</h6>
@@ -313,6 +331,7 @@ export default defineComponent({
 			selectedMaxCurrent: undefined as number | undefined,
 			selectedMinCurrent: undefined as number | undefined,
 			selectedPhases: undefined as number | undefined,
+			selectedPriority: undefined as number | undefined,
 			isModalVisible: false,
 			showPerPhase: false,
 			selectedMinCurrent1p: 0,
@@ -330,6 +349,16 @@ export default defineComponent({
 		},
 		minCurrent() {
 			return this.loadpoint?.minCurrent;
+		},
+		priority() {
+			return this.loadpoint?.priority;
+		},
+		// 0 (default) … 10 (highest); mirrors the config loadpoint modal
+		priorityOptions() {
+			const result = Array.from({ length: 11 }, (_, i) => ({ key: i, name: `${i}` }));
+			result[0]!.name = `0 (${this.$t("main.loadpointSettings.default")})`;
+			result[10]!.name = `10 (${this.$t("main.loadpointSettings.priority.highest")})`;
+			return result;
 		},
 		minCurrent1p() {
 			return this.loadpoint?.minCurrent1p ?? null;
@@ -412,6 +441,9 @@ export default defineComponent({
 		phasesConfigured(value) {
 			this.selectedPhases = value;
 		},
+		priority(value) {
+			this.selectedPriority = value;
+		},
 		minCurrent1p(value) {
 			this.selectedMinCurrent1p = value ?? 0;
 		},
@@ -429,6 +461,7 @@ export default defineComponent({
 		open(loadpointId: string) {
 			this.id = loadpointId;
 			this.selectedPhases = this.phasesConfigured;
+			this.selectedPriority = this.priority;
 			this.selectedMaxCurrent = this.maxCurrent;
 			this.selectedMinCurrent = this.minCurrent;
 			this.selectedMinCurrent1p = this.minCurrent1p ?? 0;
@@ -461,6 +494,9 @@ export default defineComponent({
 		},
 		setPhasesConfigured() {
 			api.post(this.apiPath("phases") + "/" + this.selectedPhases);
+		},
+		setPriority() {
+			api.post(this.apiPath("priority") + "/" + this.selectedPriority);
 		},
 		// setPerPhase posts a per-phase override, or DELETEs it when set to the
 		// "default" sentinel (0) so the loadpoint falls back to its global min/max

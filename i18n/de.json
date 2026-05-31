@@ -1285,6 +1285,11 @@
         "phases_3": "3-phasig",
         "phases_3_hint": "({min} bis {max})"
       },
+      "priority": {
+        "highest": "höchste",
+        "hint": "Höhere Priorität erhält bevorzugten Zugang zum Solarüberschuss.",
+        "label": "Priorität"
+      },
       "smartCostCheap": "günstige Netzladung",
       "smartCostClean": "Grünes Netzladen",
       "title": "Einstellungen {0}",
