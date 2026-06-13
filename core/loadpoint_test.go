@@ -863,3 +863,52 @@ func TestWelcomeChargeAppliedOnlyOnce(t *testing.T) {
 	welcomeCharge, _ = lp.updateChargerStatus()
 	assert.False(t, welcomeCharge)
 }
+
+// noopSettings is a do-nothing settings.Settings for tests that exercise
+// setters which persist a value.
+type noopSettings struct{}
+
+func (noopSettings) SetString(string, string)       {}
+func (noopSettings) SetInt(string, int64)           {}
+func (noopSettings) SetFloat(string, float64)       {}
+func (noopSettings) SetFloatPtr(string, *float64)   {}
+func (noopSettings) SetTime(string, time.Time)      {}
+func (noopSettings) SetJson(string, any) error      { return nil }
+func (noopSettings) SetBool(string, bool)           {}
+func (noopSettings) String(string) (string, error)  { return "", nil }
+func (noopSettings) Int(string) (int64, error)      { return 0, nil }
+func (noopSettings) Float(string) (float64, error)  { return 0, nil }
+func (noopSettings) Time(string) (time.Time, error) { return time.Time{}, nil }
+func (noopSettings) Bool(string) (bool, error)      { return false, nil }
+func (noopSettings) Json(string, any) error         { return nil }
+
+func TestBatteryBoostLimitDisablesBoost(t *testing.T) {
+	// Transitioning the boost limit to "disabled" (100) must stop an
+	// already-running boost; a non-disabled limit must leave it running. An
+	// unchanged limit (e.g. a config replace re-sending the current value) must
+	// NOT cancel an active boost (evcc-io/evcc#30291).
+	for _, tc := range []struct {
+		name      string
+		fromLimit int
+		toLimit   int
+		boost     int
+		wantBoost int
+	}{
+		{"transition to disabled stops active boost", 50, 100, boostStart, boostDisabled},
+		{"transition to disabled stops continued boost", 50, 100, boostContinue, boostDisabled},
+		{"transition to non-disabled keeps boost", 100, 50, boostStart, boostStart},
+		{"unchanged disabled limit keeps active boost (config replace)", 100, 100, boostStart, boostStart},
+		{"transition to disabled with no boost stays off", 50, 100, boostDisabled, boostDisabled},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lp := &Loadpoint{
+				log:               util.NewLogger("foo"),
+				settings:          noopSettings{},
+				batteryBoostLimit: tc.fromLimit,
+				batteryBoost:      tc.boost,
+			}
+			lp.SetBatteryBoostLimit(tc.toLimit)
+			assert.Equal(t, tc.wantBoost, lp.batteryBoost)
+		})
+	}
+}

@@ -640,6 +640,19 @@ func (lp *Loadpoint) SetBatteryBoostLimit(limit int) {
 		lp.batteryBoostLimit = limit
 		lp.settings.SetInt(keys.BatteryBoostLimit, int64(limit))
 		lp.publish(keys.BatteryBoostLimit, limit)
+
+		// transitioning to "disabled" (100) means battery boost is no longer
+		// allowed, so stop an already-running boost — otherwise it keeps
+		// draining the home battery while the UI hides the boost icon
+		// (evcc-io/evcc#30291). Kept inside the change-guard so a config
+		// replace that re-sends the unchanged limit (the config UI round-trips
+		// batteryBoostLimit) cannot cancel an active boost.
+		if limit >= 100 && lp.batteryBoost != boostDisabled {
+			lp.log.DEBUG.Println("set battery boost: false (limit disabled)")
+			lp.batteryBoost = boostDisabled
+			lp.publish(keys.BatteryBoost, false)
+			lp.requestUpdate()
+		}
 	}
 }
 
