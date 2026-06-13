@@ -5,8 +5,10 @@ import (
 
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/types"
+	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/config"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestGreenShare(t *testing.T) {
@@ -121,6 +123,51 @@ func TestGreenShare(t *testing.T) {
 		if greenShareLoadpoints != tc.greenShareLoadpoints {
 			t.Errorf("greenShareLoadpoints wanted %.3f, got %.3f", tc.greenShareLoadpoints, greenShareLoadpoints)
 		}
+	}
+}
+
+func TestSitePowerBatteryBoost(t *testing.T) {
+	// Reproduces evcc-io/evcc#30541: below prioritySoc the battery charge power
+	// is zeroed for PV-surplus accounting, which also starves an active battery
+	// boost of its real charge-power headroom. With boost active the zeroing
+	// must be skipped so the boosting loadpoint sees the full headroom.
+	// Inputs mirror the issue: gridPower=0, battery charging at -2000W, residual=100.
+	for _, tc := range []struct {
+		name        string
+		soc         float64
+		prioritySoc float64
+		boost       bool
+		want        float64
+	}{
+		{"above prioritySoc, no boost", 50, 20, false, -1900}, // battery charge headroom kept
+		{"above prioritySoc, boost", 50, 20, true, -1900},     // boost irrelevant above prioritySoc
+		{"below prioritySoc, no boost", 10, 20, false, 100},   // zeroed (regression guard: non-boost unchanged)
+		{"below prioritySoc, boost", 10, 20, true, -1900},     // #30541 fix: boost keeps battery headroom
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			meter := api.NewMockMeter(ctrl)
+			meter.EXPECT().CurrentPower().Return(-2000.0, nil).AnyTimes()
+			bat := api.NewMockBattery(ctrl)
+			bat.EXPECT().Soc().Return(tc.soc, nil).AnyTimes()
+
+			dev := &struct {
+				api.Meter
+				api.Battery
+			}{Meter: meter, Battery: bat}
+
+			s := &Site{
+				log:           util.NewLogger("foo"),
+				ResidualPower: 100,
+				prioritySoc:   tc.prioritySoc,
+				batteryMeters: []config.Device[api.Meter]{config.NewStaticDevice[api.Meter](config.Named{}, dev)},
+			}
+
+			got, _, _, err := s.sitePower(0, 0, tc.boost)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
 	}
 }
 

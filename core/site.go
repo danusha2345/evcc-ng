@@ -843,7 +843,7 @@ func optimizerEnabled() bool {
 //   - the net power exported by the site minus a residual margin
 //     (negative values mean grid: export, battery: charging
 //   - if battery buffer can be used for charging
-func (site *Site) sitePower(totalChargePower, flexiblePower float64) (float64, bool, bool, error) {
+func (site *Site) sitePower(totalChargePower, flexiblePower float64, boost bool) (float64, bool, bool, error) {
 	if err := site.updateMeters(); err != nil {
 		return 0, false, false, err
 	}
@@ -881,8 +881,12 @@ func (site *Site) sitePower(totalChargePower, flexiblePower float64) (float64, b
 		site.RLock()
 		defer site.RUnlock()
 
-		// if battery is charging below prioritySoc give it priority
-		if site.battery.Soc < site.prioritySoc && batteryPower < 0 {
+		// if battery is charging below prioritySoc give it priority -- but not
+		// when this loadpoint has battery boost active: boost must see the real
+		// battery charge power as headroom even below prioritySoc, otherwise the
+		// boost is starved to ~residualPower and the loadpoint under-charges /
+		// stays 1p (evcc-io/evcc#30541, discussion #30456)
+		if !boost && site.battery.Soc < site.prioritySoc && batteryPower < 0 {
 			site.log.DEBUG.Printf("battery has priority at soc %.0f%% (< %.0f%%)", site.battery.Soc, site.prioritySoc)
 			batteryPower = 0
 			excessDCPower = 0
@@ -993,7 +997,11 @@ func (site *Site) update(lp updater) {
 		flexiblePower = site.prioritizer.GetChargePowerFlexibility(lp)
 	}
 
-	if sitePower, batteryBuffered, batteryStart, err := site.sitePower(totalChargePower, flexiblePower); err == nil {
+	// battery boost on this loadpoint must keep the real battery charge power as
+	// headroom even below prioritySoc (evcc-io/evcc#30541)
+	boost := lp != nil && lp.GetBatteryBoost() != boostDisabled
+
+	if sitePower, batteryBuffered, batteryStart, err := site.sitePower(totalChargePower, flexiblePower, boost); err == nil {
 		// ignore negative pvPower values as that means it is not an energy source but consumption
 		homePower := site.gridPower + max(0, site.pvPower) + site.battery.Power - totalChargePower
 		homePower = max(homePower, 0)
