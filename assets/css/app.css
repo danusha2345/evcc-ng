@@ -715,9 +715,13 @@ html.app .hide-in-app {
 	background-color: var(--evcc-background);
 }
 
-html.app .modal-dialog {
-	margin-top: var(--safe-area-inset-top);
-	margin-bottom: var(--safe-area-inset-bottom);
+/* keep the modal (and its close button) clear of the device safe area in
+   every standalone context — native app wrapper AND iOS Home Screen PWA, which
+   does not carry the html.app class. max() preserves the default Bootstrap
+   margin on non-notched devices where the insets are 0px (evcc-io/evcc#30314). */
+.modal-dialog {
+	margin-top: max(var(--bs-modal-margin), var(--safe-area-inset-top));
+	margin-bottom: max(var(--bs-modal-margin), var(--safe-area-inset-bottom));
 }
 
 .btn-neutral {
