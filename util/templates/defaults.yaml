@@ -98,6 +98,15 @@ params:
       en: Used to determine the minimum solar surplus and plan duration.
     type: choice
     choice: ["1", "2", "3"]
+  - name: fixedphases
+    description:
+      de: Feste Phasenanzahl
+      en: Fixed phase count
+    help:
+      de: Erzwingt eine feste Phasenanzahl, solange dieses Fahrzeug aktiv ist (für Fahrzeuge ohne dynamische 1p/3p-Umschaltung, z. B. MG4). 0 = automatisch.
+      en: Forces a fixed phase count while this vehicle is active (for vehicles that cannot do dynamic 1p/3p switching, e.g. MG4). 0 = automatic.
+    type: choice
+    choice: ["0", "1", "3"]
   - name: connector
     description:
       en: Connector number
@@ -527,6 +536,8 @@ presets:
     - name: capacity
     - name: phases
       advanced: true
+    - name: fixedphases
+      advanced: true
     - name: mode
       advanced: true
     - name: minCurrent
@@ -549,6 +560,8 @@ presets:
       advanced: true
     - name: capacity
     - name: phases
+      advanced: true
+    - name: fixedphases
       advanced: true
     - name: mode
       advanced: true

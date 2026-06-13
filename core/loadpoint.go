@@ -1308,13 +1308,14 @@ func (lp *Loadpoint) resetPhaseTimer() {
 
 // scalePhasesRequired validates if fixed phase configuration matches enabled phases
 func (lp *Loadpoint) scalePhasesRequired() bool {
-	return lp.hasPhaseSwitching() && lp.phasesConfigured != 0 && lp.phasesConfigured != lp.GetPhases()
+	phasesConfigured := lp.effectivePhasesConfigured()
+	return lp.hasPhaseSwitching() && phasesConfigured != 0 && phasesConfigured != lp.GetPhases()
 }
 
 // scalePhasesIfAvailable scales if api.PhaseSwitcher is available and allowed
 func (lp *Loadpoint) scalePhasesIfAvailable(phases int) error {
-	if lp.phasesConfigured != 0 {
-		phases = lp.phasesConfigured
+	if c := lp.effectivePhasesConfigured(); c != 0 {
+		phases = c
 	}
 
 	if lp.hasPhaseSwitching() {
@@ -1409,7 +1410,7 @@ func (lp *Loadpoint) pvScalePhases(sitePower, minCurrent, maxCurrent float64) in
 	var waiting bool
 	activePhases := lp.ActivePhases()
 	availablePower := lp.chargePower - sitePower
-	scalable := (sitePower > 0 || !lp.enabled) && activePhases > 1 && lp.phasesConfigured < 3
+	scalable := (sitePower > 0 || !lp.enabled) && activePhases > 1 && lp.effectivePhasesConfigured() < 3
 
 	// scale down phases
 	if targetCurrent := powerToCurrent(availablePower, activePhases); targetCurrent < minCurrent && scalable {
@@ -2151,11 +2152,12 @@ func (lp *Loadpoint) Update(sitePower, batteryBoostPower float64, consumption, f
 		err = lp.setLimit(0)
 
 	case lp.scalePhasesRequired():
-		if err = lp.scalePhases(lp.phasesConfigured); errors.Is(err, api.ErrNotAvailable) {
+		phases := lp.effectivePhasesConfigured()
+		if err = lp.scalePhases(phases); errors.Is(err, api.ErrNotAvailable) {
 			// the charger cannot switch phases right now (e.g. EEBus charger
 			// with an ISO 15118 vehicle). Adopt the configured phase count so
 			// the switch is not re-attempted on every cycle (issue #29974).
-			lp.SetPhases(lp.phasesConfigured)
+			lp.SetPhases(phases)
 			err = nil
 		}
 

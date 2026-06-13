@@ -148,6 +148,14 @@ type PhaseDescriber interface {
 	Phases() int
 }
 
+// PhaseConfigurer returns a fixed phase count the loadpoint should use while
+// this vehicle is active (0 = auto/dynamic switching). Used by vehicles that
+// cannot do dynamic 1p/3p switching and must charge at a fixed phase count
+// (e.g. MG4). See evcc-io/evcc#30705.
+type PhaseConfigurer interface {
+	PhasesConfigured() int
+}
+
 // Vehicle represents the EV and it's battery
 type Vehicle interface {
 	Battery

@@ -10,6 +10,7 @@ type embed struct {
 	Icon_        string           `mapstructure:"icon"`
 	Capacity_    float64          `mapstructure:"capacity"`
 	Phases_      int              `mapstructure:"phases"`
+	FixedPhases_ int              `mapstructure:"fixedphases"` // 0=auto, 1=force 1p, 3=force 3p (issue #30705)
 	Identifiers_ []string         `mapstructure:"identifiers"`
 	Features_    []api.Feature    `mapstructure:"features"`
 	OnIdentify   api.ActionConfig `mapstructure:"onIdentify"`
@@ -45,6 +46,14 @@ var _ api.PhaseDescriber = (*embed)(nil)
 // Phases returns the phases used by the vehicle
 func (v *embed) Phases() int {
 	return v.Phases_
+}
+
+var _ api.PhaseConfigurer = (*embed)(nil)
+
+// PhasesConfigured returns a fixed phase-count override for charging this
+// vehicle (0 = auto/dynamic switching, the default). Implements api.PhaseConfigurer.
+func (v *embed) PhasesConfigured() int {
+	return v.FixedPhases_
 }
 
 // Identifiers implements the api.Identifier interface

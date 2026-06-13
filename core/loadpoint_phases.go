@@ -135,8 +135,9 @@ func (lp *Loadpoint) maxActivePhases() int {
 	}
 
 	// if 1p3p supported then assume configured limit or 3p
+	// (vehicle override wins over the loadpoint setting, #30705)
 	if lp.hasPhaseSwitching() {
-		physical = lp.phasesConfigured
+		physical = lp.effectivePhasesConfigured()
 	}
 
 	return min(expect(vehicle), expect(physical), expect(measured), expect(charger))
@@ -148,6 +149,37 @@ func (lp *Loadpoint) getVehiclePhases() int {
 	}
 
 	return 0
+}
+
+// getVehiclePhasesConfigured returns the active vehicle's fixed phase override
+// (0 = auto). Only vehicles implementing api.PhaseConfigurer carry it (#30705).
+func (lp *Loadpoint) getVehiclePhasesConfigured() int {
+	if v := lp.GetVehicle(); v != nil {
+		if vc, ok := v.(api.PhaseConfigurer); ok {
+			return vc.PhasesConfigured()
+		}
+	}
+
+	return 0
+}
+
+// effectivePhasesConfigured returns the phase configuration that governs phase
+// decisions: the active vehicle's fixed override takes precedence over the
+// loadpoint setting, but only on a phase-switching charger (otherwise the count
+// cannot be forced). 0 means auto/dynamic switching (#30705).
+//
+// Only 1p/3p are accepted as a forced count (mirrors SetPhasesConfigured); any
+// other value — including a hand-written `fixedphases: 2`, which the config UI
+// never offers — falls back to the loadpoint setting so a bad override cannot
+// drive a perpetual phase re-switch loop on PhaseGetter chargers.
+func (lp *Loadpoint) effectivePhasesConfigured() int {
+	if lp.hasPhaseSwitching() {
+		if v := lp.getVehiclePhasesConfigured(); v == 1 || v == 3 {
+			return v
+		}
+	}
+
+	return lp.phasesConfigured
 }
 
 func (lp *Loadpoint) getChargerPhysicalPhases() int {

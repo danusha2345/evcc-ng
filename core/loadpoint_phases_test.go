@@ -164,6 +164,72 @@ func TestMinActivePhases(t *testing.T) {
 	}
 }
 
+// phaseConfigurerVehicle wraps a mock vehicle and adds the api.PhaseConfigurer
+// fixed-phase override (issue #30705).
+type phaseConfigurerVehicle struct {
+	api.Vehicle
+	configured int
+}
+
+func (v phaseConfigurerVehicle) PhasesConfigured() int { return v.configured }
+
+func TestVehiclePhasesConfigured(t *testing.T) {
+	for _, tc := range []struct {
+		name              string
+		switching         bool // charger supports 1p3p
+		lpConfigured      int  // loadpoint's own phasesConfigured
+		wrap              bool // vehicle implements api.PhaseConfigurer
+		override          int  // vehicle fixed-phase override
+		currentPhases     int  // lp.phases (GetPhases)
+		wantEffective     int
+		wantMaxActive     int // asserted only for switching chargers
+		wantScaleRequired bool
+	}{
+		{"override 3p forces up", true, 0, true, 3, 1, 3, 3, true},
+		{"override 1p forces down", true, 0, true, 1, 3, 1, 1, true},
+		{"override matches current, no re-switch", true, 0, true, 3, 3, 3, 3, false},
+		{"override 0 falls back to loadpoint setting", true, 3, true, 0, 1, 3, 3, true},
+		{"vehicle without PhaseConfigurer", true, 1, false, 0, 3, 1, 1, true},
+		{"invalid override value (2) falls back to auto", true, 0, true, 2, 1, 0, 3, false},
+		{"override ignored on non-switching charger", false, 0, true, 3, 1, 0, 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockVehicle := api.NewMockVehicle(ctrl)
+			mockVehicle.EXPECT().Phases().Return(0).AnyTimes() // descriptive max: unknown
+
+			var vehicle api.Vehicle = mockVehicle
+			if tc.wrap {
+				vehicle = phaseConfigurerVehicle{Vehicle: mockVehicle, configured: tc.override}
+			}
+
+			plainCharger := api.NewMockCharger(ctrl)
+			var charger api.Charger = plainCharger
+			if tc.switching {
+				charger = struct {
+					*api.MockCharger
+					*api.MockPhaseSwitcher
+				}{plainCharger, api.NewMockPhaseSwitcher(ctrl)}
+			}
+
+			lp := &Loadpoint{
+				phasesConfigured: tc.lpConfigured,
+				vehicle:          vehicle,
+				phases:           tc.currentPhases,
+				charger:          charger,
+			}
+
+			require.Equal(t, tc.wantEffective, lp.effectivePhasesConfigured(), "effectivePhasesConfigured")
+			require.Equal(t, tc.wantScaleRequired, lp.scalePhasesRequired(), "scalePhasesRequired")
+			if tc.switching {
+				require.Equal(t, tc.wantMaxActive, lp.maxActivePhases(), "maxActivePhases")
+			}
+		})
+	}
+}
+
 func testScale(t *testing.T, lp *Loadpoint, sitePower float64, direction string, tc testCase) {
 	t.Helper()
 
