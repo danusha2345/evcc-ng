@@ -36,8 +36,8 @@
 <script lang="ts">
 import LabelAndValue from "../Helper/LabelAndValue.vue";
 import AnimatedNumber from "../Helper/AnimatedNumber.vue";
-import formatter from "@/mixins/formatter";
-import { estimatedSoc, energyOptions, optionStep, fmtEnergy } from "@/utils/energyOptions.ts";
+import formatter, { POWER_UNIT } from "@/mixins/formatter";
+import { estimatedSoc, energyOptions, optionStep } from "@/utils/energyOptions.ts";
 import { defineComponent } from "vue";
 
 export default defineComponent({
@@ -77,7 +77,19 @@ export default defineComponent({
 			);
 		},
 		fmtEnergy(value: number) {
-			return fmtEnergy(value, this.step, this.fmtWh, this.$t("main.targetEnergy.noLimit"));
+			if (value === 0) {
+				return this.$t("main.targetEnergy.noLimit");
+			}
+			// derive the decimal count from the settled limit, not the per-frame
+			// value, so AnimatedNumber's fractional intermediate frames don't
+			// flicker between 0 and 1 decimals while still keeping a decimal for
+			// a fractional limit (evcc-io/evcc#30736)
+			const digits =
+				this.step >= 0.1 &&
+				!(Number.isInteger(this.step) && Number.isInteger(this.limitEnergy))
+					? 1
+					: 0;
+			return this.fmtWh(value * 1e3, POWER_UNIT.KW, true, digits);
 		},
 		fmtSoc(value: number) {
 			return `+${this.fmtPercentage(value)}`;

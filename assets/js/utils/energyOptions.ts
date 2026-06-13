@@ -22,7 +22,10 @@ export function fmtEnergy(
     return zeroText;
   }
   const inKWh = step >= 0.1;
-  const digits = inKWh && !Number.isInteger(step) ? 1 : 0;
+  // show one decimal whenever the value (or step) is fractional, so a small
+  // limit like 2.4 kWh is not rounded to "2 kWh" on a coarse integer step
+  // (e.g. a no-battery integrated device, evcc-io/evcc#30736)
+  const digits = inKWh && !(Number.isInteger(step) && Number.isInteger(energy)) ? 1 : 0;
   return fmtWh(energy * 1e3, inKWh ? POWER_UNIT.KW : POWER_UNIT.W, true, digits);
 }
 
