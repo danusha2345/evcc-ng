@@ -307,6 +307,11 @@ func testInstance(instance any, passiveOnly ...bool) map[string]testResult {
 		hot("energy", val, err)
 	}
 
+	if dev, ok := api.Cap[api.MeterReturnEnergy](instance); ok {
+		val, err := dev.ReturnEnergy()
+		makeResult("returnEnergy", val, err)
+	}
+
 	if dev, ok := api.Cap[api.Battery](instance); ok {
 		key := "soc"
 		if hasFeature(instance, api.Heating) {
@@ -404,12 +409,14 @@ func testInstance(instance any, passiveOnly ...bool) map[string]testResult {
 
 	if dev, ok := api.Cap[api.Dimmer](instance); ok {
 		val, err := dev.Dimmed()
-		hot("dimmed", val, err)
+		makeResult("dimmed", val, err)
 	}
 
 	if dev, ok := api.Cap[api.Curtailer](instance); ok {
-		val, err := dev.Curtailed()
-		hot("curtailed", val, err)
+		makeResult("curtailable", true, nil)
+		if val, err := dev.Curtailed(); err != nil || val {
+			makeResult("curtailed", true, err)
+		}
 	}
 
 	if dev, ok := api.Cap[api.Identifier](instance); ok {

@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/keys"
 	"github.com/evcc-io/evcc/tariff"
 	"github.com/evcc-io/evcc/util/config"
+	"github.com/evcc-io/evcc/util/modbus"
 	"github.com/samber/lo"
 )
 
@@ -20,8 +22,6 @@ type circuitStruct struct {
 	Current    *float64 `json:"current,omitempty"`
 	MaxPower   float64  `json:"maxPower,omitempty"`
 	MaxCurrent float64  `json:"maxCurrent,omitempty"`
-	Dimmed     *bool    `json:"dimmed,omitempty"`
-	Curtailed  *bool    `json:"curtailed,omitempty"`
 }
 
 // publishCircuits returns a list of circuit titles
@@ -45,8 +45,6 @@ func (site *Site) publishCircuits() {
 			Power:      instance.GetChargePower(),
 			MaxPower:   instance.GetMaxPower(),
 			MaxCurrent: instance.GetMaxCurrent(),
-			Dimmed:     instance.Dimmed(),
-			Curtailed:  instance.Curtailed(),
 		}
 
 		if instance.GetMaxCurrent() > 0 {
@@ -71,21 +69,21 @@ func (site *Site) dimMeters(dim *bool) error {
 			continue
 		}
 
-		if dimmed, err := m.Dimmed(); err == nil {
+		if dimmed, err := backoff.RetryWithData(m.Dimmed, modbus.Backoff()); err == nil {
 			if *dim == dimmed {
 				continue
 			}
 		} else {
 			if !errors.Is(err, api.ErrNotAvailable) {
-				errs = errors.Join(errs, fmt.Errorf("%s dimmed: %w", dev.Config().Name, err))
+				errs = errors.Join(errs, fmt.Errorf("%s dimmed: %w", deviceTitleOrName(dev), err))
 			}
 			continue
 		}
 
 		if err := m.Dim(*dim); err == nil {
-			site.log.DEBUG.Printf("%s dim: %t", dev.Config().Name, *dim)
+			site.log.DEBUG.Printf("%s dim: %t", deviceTitleOrName(dev), *dim)
 		} else if !errors.Is(err, api.ErrNotAvailable) {
-			errs = errors.Join(errs, fmt.Errorf("%s dim: %w", dev.Config().Name, err))
+			errs = errors.Join(errs, fmt.Errorf("%s dim: %w", deviceTitleOrName(dev), err))
 		}
 	}
 
@@ -128,21 +126,21 @@ func (site *Site) curtailPV(curtail *bool) error {
 			continue
 		}
 
-		if curtailed, err := m.Curtailed(); err == nil {
+		if curtailed, err := backoff.RetryWithData(m.Curtailed, modbus.Backoff()); err == nil {
 			if *curtail == curtailed {
 				continue
 			}
 		} else {
 			if !errors.Is(err, api.ErrNotAvailable) {
-				errs = errors.Join(errs, fmt.Errorf("%s curtailed: %w", dev.Config().Name, err))
+				errs = errors.Join(errs, fmt.Errorf("%s curtailed: %w", deviceTitleOrName(dev), err))
 			}
 			continue
 		}
 
 		if err := m.Curtail(*curtail); err == nil {
-			site.log.DEBUG.Printf("%s curtail: %t", dev.Config().Name, *curtail)
+			site.log.DEBUG.Printf("%s curtail: %t", deviceTitleOrName(dev), *curtail)
 		} else if !errors.Is(err, api.ErrNotAvailable) {
-			errs = errors.Join(errs, fmt.Errorf("%s curtail: %w", dev.Config().Name, err))
+			errs = errors.Join(errs, fmt.Errorf("%s curtail: %w", deviceTitleOrName(dev), err))
 		}
 	}
 
