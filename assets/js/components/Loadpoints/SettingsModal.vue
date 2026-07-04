@@ -419,7 +419,13 @@ export default defineComponent({
 			return this.phasesConfigured;
 		},
 		minCurrentOptions() {
-			const opt1 = [...range(Math.floor(this.maxCurrent ?? 0), 1), 0.5, 0.25, 0.125];
+			const max = Math.floor(this.maxCurrent ?? 0);
+			const opt1 = [...range(max, 1), 0.5, 0.25, 0.125];
+			// switchable sockets need a precise switch-on threshold — offer 0.5 A
+			// steps through the low range where that matters (evcc-io/evcc#16435)
+			if (this.switchDevice) {
+				for (let v = 1.5; v < Math.min(max, 10); v += 1) opt1.push(v);
+			}
 			// ensure that current value is always included
 			const opt2 = insertSorted(opt1, this.minCurrent ?? 0);
 			return opt2.map((value) => this.currentOption(value, value === 6, this.minPhases));
