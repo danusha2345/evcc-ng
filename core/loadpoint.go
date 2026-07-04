@@ -215,8 +215,10 @@ func NewLoadpointFromConfig(log *util.Logger, settings settings.Settings, collec
 	} else if lp.Enable.Threshold > 0 {
 		lp.log.WARN.Printf("PV mode enable threshold %.0fW > 0 will start PV charging on grid power consumption. Did you mean -%.0f?", lp.Enable.Threshold, lp.Enable.Threshold)
 	}
-	if lp.Disable.ImmediateThreshold != 0 && lp.Disable.ImmediateThreshold < lp.Disable.Threshold {
-		lp.log.WARN.Printf("PV mode immediate disable threshold (%.0fW) is below disable threshold (%.0fW) and will never trigger", lp.Disable.ImmediateThreshold, lp.Disable.Threshold)
+	if lp.Disable.ImmediateThreshold < 0 {
+		lp.log.WARN.Printf("PV mode immediate disable threshold (%.0fW) is negative and will never trigger", lp.Disable.ImmediateThreshold)
+	} else if lp.Disable.ImmediateThreshold != 0 && lp.Disable.ImmediateThreshold < lp.Disable.Threshold {
+		lp.log.WARN.Printf("PV mode immediate disable threshold (%.0fW) is below disable threshold (%.0fW) and will make every disable immediate, bypassing the disable delay", lp.Disable.ImmediateThreshold, lp.Disable.Threshold)
 	}
 
 	// choose sane default if mode is not set
