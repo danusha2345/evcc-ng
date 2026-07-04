@@ -399,8 +399,9 @@ func testInstance(ctx context.Context, instance any, passiveOnly ...bool) map[st
 
 	wg.Go(func() {
 		if dev, ok := api.Cap[api.ChargeRater](instance); ok {
-			val, err := dev.ChargedEnergy()
-			makeResult("chargedEnergy", val, err)
+			// vehicles can implement ChargeRater too (e.g. Tesla), so this
+			// probe must stay passive for vehicle polling (evcc-io/evcc#30006)
+			hot("chargedEnergy", func() (any, error) { return dev.ChargedEnergy() })
 		}
 	})
 
