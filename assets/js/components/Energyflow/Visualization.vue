@@ -135,7 +135,11 @@ export default defineComponent({
 		outPower: { type: Number, default: 0 },
 	},
 	data() {
-		return { width: 0, transitionsEnabled: false };
+		return {
+			width: 0,
+			transitionsEnabled: false,
+			resizeObserver: null as ResizeObserver | null,
+		};
 	},
 	computed: {
 		total() {
@@ -174,13 +178,22 @@ export default defineComponent({
 		},
 	},
 	mounted() {
-		this.$nextTick(function () {
-			window.addEventListener("resize", this.updateElementWidth);
+		this.$nextTick(() => {
+			// Observe the element itself rather than only listening for window
+			// resize. A one-off mount-time measure can read width 0 when the app
+			// loads in a maximized/fullscreen window (layout not settled yet), and
+			// would then self-correct only once the window is resized — leaving the
+			// top label bar's icons collapsed until then (evcc-io/evcc#31341).
+			const el = this.$refs["site_progress"] as HTMLElement | undefined;
+			if (el) {
+				this.resizeObserver = new ResizeObserver(() => this.updateElementWidth());
+				this.resizeObserver.observe(el);
+			}
 			this.updateElementWidth();
 		});
 	},
 	beforeUnmount() {
-		window.removeEventListener("resize", this.updateElementWidth);
+		this.resizeObserver?.disconnect();
 	},
 	methods: {
 		widthTotal(power: number) {
