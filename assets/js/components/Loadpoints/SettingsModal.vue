@@ -99,7 +99,7 @@
 				</div>
 			</div>
 
-			<div class="mb-3 row">
+			<div v-if="!switchDevice" class="mb-3 row">
 				<label :for="formId('maxcurrent')" class="col-sm-4 col-form-label pt-0 pt-sm-2">
 					{{ $t("main.loadpointSettings.maxCurrent.label") }}
 				</label>
@@ -382,6 +382,9 @@ export default defineComponent({
 				value,
 				name: `${this.fmtNumber(value, undefined)} A`,
 			}));
+		},
+		switchDevice() {
+			return this.loadpoint?.chargerFeatureSwitchDevice;
 		},
 		batteryBoostLimit() {
 			return this.loadpoint?.batteryBoostLimit;

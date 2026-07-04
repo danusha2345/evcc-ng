@@ -284,6 +284,7 @@ func TestPvScalePhases(t *testing.T) {
 		vehicle := api.NewMockVehicle(ctrl)
 		vehicle.EXPECT().Phases().Return(tc.vehicle).MinTimes(1)
 		vehicle.EXPECT().OnIdentified().Return(api.ActionConfig{}).AnyTimes()
+		vehicle.EXPECT().Features().AnyTimes()
 
 		lp := &Loadpoint{
 			log:              util.NewLogger("foo"),

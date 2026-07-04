@@ -82,6 +82,33 @@
 					/>
 				</div>
 
+				<h2 class="my-4 mt-5">{{ $t("config.section.consumers") }}</h2>
+				<div class="p-0 config-list">
+					<MeterCard
+						v-for="meter in consumerMeters"
+						:key="meter.name"
+						:meter="meter"
+						meter-type="consumer"
+						:has-error="hasDeviceError('meter', meter.name)"
+						:tags="deviceTags('meter', meter.name)"
+						@edit="(type, id) => openModal('meter', { type, id })"
+					/>
+					<MeterCard
+						v-for="meter in auxMeters"
+						:key="meter.name"
+						:meter="meter"
+						meter-type="aux"
+						:has-error="hasDeviceError('meter', meter.name)"
+						:tags="deviceTags('meter', meter.name)"
+						@edit="(type, id) => openModal('meter', { type, id })"
+					/>
+					<NewDeviceButton
+						data-testid="add-consumer"
+						:title="$t('config.main.addConsumer')"
+						@click="openModal('meter', { choices: ['consumer', 'aux'] })"
+					/>
+				</div>
+
 				<h2 class="my-4 mt-5">{{ $t("config.section.grid") }}</h2>
 				<div class="p-0 config-list">
 					<MeterCard
@@ -130,15 +157,6 @@
 				<h2 class="my-4 mt-5">{{ $t("config.section.additionalMeter") }}</h2>
 				<div class="p-0 config-list">
 					<MeterCard
-						v-for="meter in auxMeters"
-						:key="meter.name"
-						:meter="meter"
-						meter-type="aux"
-						:has-error="hasDeviceError('meter', meter.name)"
-						:tags="deviceTags('meter', meter.name)"
-						@edit="(type, id) => openModal('meter', { type, id })"
-					/>
-					<MeterCard
 						v-for="meter in extMeters"
 						:key="meter.name"
 						:meter="meter"
@@ -148,8 +166,9 @@
 						@edit="(type, id) => openModal('meter', { type, id })"
 					/>
 					<NewDeviceButton
+						data-testid="add-additional"
 						:title="$t('config.main.addAdditional')"
-						@click="openModal('meter', { choices: ['aux', 'ext'] })"
+						@click="openModal('meter', { type: 'ext' })"
 					/>
 				</div>
 
@@ -301,6 +320,20 @@
 						</template>
 					</DeviceCard>
 					<DeviceCard
+						:title="$t('config.hems.title')"
+						editable
+						:error="hasClassError('hems')"
+						:unconfigured="isUnconfigured(hemsTags)"
+						data-testid="hems"
+						@edit="openModal('hems')"
+					>
+						<template #icon><HemsIcon /></template>
+						<template #tags>
+							<p v-if="hemsLabel" class="my-2 fw-bold">{{ hemsLabel }}</p>
+							<DeviceTags :tags="hemsTags" />
+						</template>
+					</DeviceCard>
+					<DeviceCard
 						:title="$t('config.modbusproxy.title')"
 						editable
 						:error="hasClassError('modbusproxy')"
@@ -311,19 +344,6 @@
 						<template #icon><ModbusProxyIcon /></template>
 						<template #tags>
 							<DeviceTags :tags="modbusproxyTags" />
-						</template>
-					</DeviceCard>
-					<DeviceCard
-						:title="$t('config.hems.title')"
-						editable
-						:error="hasClassError('hems')"
-						:unconfigured="isUnconfigured(hemsTags)"
-						data-testid="hems"
-						@edit="openModal('hems')"
-					>
-						<template #icon><HemsIcon /></template>
-						<template #tags>
-							<DeviceTags :tags="hemsTags" />
 						</template>
 					</DeviceCard>
 					<DeviceCard
@@ -434,7 +454,11 @@
 				<MqttModal @changed="loadDirty" />
 				<NetworkModal @changed="loadDirty" />
 				<ControlModal @changed="loadDirty" />
-				<HemsModal :yamlSource="hems?.yamlSource" @changed="loadDirty" />
+				<HemsModal
+					:id="hemsDevices[0]?.id"
+					:yamlSource="hems?.yamlSource"
+					@changed="hemsChanged"
+				/>
 				<ShmModal @changed="loadDirty" />
 				<MessagingLegacyModal @changed="loadDirty" />
 				<MessagingModal :messengers="messengers" @changed="loadDirty" />
@@ -533,6 +557,7 @@ import type {
 	ConfigVehicle,
 	ConfigCircuit,
 	ConfigMessenger,
+	ConfigHems,
 	ConfigLoadpoint,
 	ConfigMeter,
 	Timeout,
@@ -544,7 +569,7 @@ import type {
 	Notification,
 	Remote,
 } from "@/types/evcc";
-import { CURRENCY } from "@/types/evcc";
+import { ConfigType, CURRENCY } from "@/types/evcc";
 import { circuitTree, type CircuitNode } from "@/utils/circuits";
 
 type DeviceValuesMap = Record<DeviceType, Record<string, any>>;
@@ -635,6 +660,7 @@ export default defineComponent({
 			loadpoints: [] as ConfigLoadpoint[],
 			chargers: [] as ConfigCharger[],
 			circuits: [] as ConfigCircuit[],
+			hemsDevices: [] as ConfigHems[],
 			tariffs: [] as any[], // ConfigTariff[] - tariff device entities
 			tariffRefs: {
 				grid: "",
@@ -650,6 +676,7 @@ export default defineComponent({
 				title: "",
 				aux: null as string[] | null,
 				ext: null as string[] | null,
+				consumers: null as string[] | null,
 			} as SiteConfig,
 			deviceValueTimeout: null as Timeout,
 			deviceValues: {
@@ -705,6 +732,9 @@ export default defineComponent({
 		extMeters() {
 			const names = this.site?.ext;
 			return this.getMetersByNames(names);
+		},
+		consumerMeters() {
+			return this.getMetersByNames(this.site?.consumers);
 		},
 		gridTariff() {
 			const name = this.tariffRefs?.grid;
@@ -792,11 +822,10 @@ export default defineComponent({
 			return store.state?.hems;
 		},
 		hemsTags(): DeviceTags {
-			const type = this.hems?.config?.type;
-			const status = store.state?.hems?.status;
-			if (!type && !status) {
+			if (this.hemsDevices.length === 0 && !this.hems?.config?.configured) {
 				return { configured: { value: false } };
 			}
+			const status = store.state?.hems?.status;
 			if (!status) {
 				return { configured: { value: true } };
 			}
@@ -809,16 +838,23 @@ export default defineComponent({
 			} else if (status.dimmed !== undefined) {
 				result["dimmed"] = { value: status.dimmed };
 			}
-			if (status.curtailed && status.maxProductionPower !== undefined) {
+			if ((status.curtailed ?? 100) < 100 && status.maxProductionPower !== undefined) {
 				result["curtailLimit"] = {
 					value: status.maxProductionPower,
 					warning: true,
 				};
 			} else if (status.curtailed !== undefined) {
-				result["curtailed"] = { value: status.curtailed };
+				result["curtailed"] = { value: status.curtailed < 100 };
 			}
 
 			return result;
+		},
+		hemsLabel(): string {
+			const dev = this.hemsDevices[0];
+			if (!dev) return "";
+			if (dev.deviceProduct) return dev.deviceProduct;
+			if (dev.type === ConfigType.Custom) return this.$t("config.hems.customOption");
+			return "";
 		},
 		remote(): Remote | undefined {
 			return store.state?.remote;
@@ -978,6 +1014,7 @@ export default defineComponent({
 			await this.loadMessengers();
 			await this.loadTariffs();
 			await this.loadTariffRefs();
+			await this.loadHems();
 			await this.loadDirty();
 			this.updateValues();
 		},
@@ -1003,6 +1040,9 @@ export default defineComponent({
 		},
 		async loadMeters() {
 			this.meters = (await this.loadConfig("devices/meter")) || [];
+		},
+		async loadHems() {
+			this.hemsDevices = (await this.loadConfig("devices/hems")) || [];
 		},
 		async loadCircuits() {
 			this.circuits = (await this.loadConfig("devices/circuit")) || [];
@@ -1067,6 +1107,22 @@ export default defineComponent({
 						this.site.ext.push(name);
 						this.saveSite(type);
 						break;
+					case "consumer":
+						if (!this.site.consumers) this.site.consumers = [];
+						this.site.consumers.push(name);
+						this.saveSite("consumers");
+						break;
+				}
+			}
+
+			// Converted: move ext meter to consumers (history is reconciled on restart)
+			if (result.action === "converted") {
+				const name = this.meters.find((m) => m.id === result.id)?.name;
+				if (name) {
+					const ext = (this.site.ext || []).filter((n) => n !== name);
+					const consumers = [...(this.site.consumers || []), name];
+					await api.put("/config/site", { ext, consumers });
+					await this.loadSite();
 				}
 			}
 
@@ -1084,6 +1140,10 @@ export default defineComponent({
 			await this.loadChargers();
 			await this.loadDirty();
 			this.updateValues();
+		},
+		async hemsChanged() {
+			await this.loadHems();
+			await this.loadDirty();
 		},
 		async loadpointChanged() {
 			await this.loadLoadpoints();

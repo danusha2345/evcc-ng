@@ -176,6 +176,25 @@ func (lp *Loadpoint) effectiveMinCurrent() float64 {
 		}
 	}
 
+	// power-limited chargers (e.g. EEBus OHPCF heat pump) report their demand in
+	// W; convert to per-phase current so the PV enable gate covers it (evcc-io/evcc#30636)
+	powerLimited := false
+	if c, ok := api.Cap[api.PowerLimiter](lp.charger); ok {
+		if res, _, err := c.GetMinMaxPower(); err == nil && res > 0 {
+			chargerMin = res / (Voltage * float64(lp.minActivePhases()))
+			powerLimited = true
+		}
+	}
+
+	// a power-limited device's derived floor is its own operating minimum, so it
+	// wins directly — the EV-oriented loadpoint min does not apply here (#30636)
+	if powerLimited {
+		return max(vehicleMin, chargerMin)
+	}
+
+	// user policy, vehicle requirement and charger physical floor are all
+	// "do not go below X" constraints — respect the loadpoint-configured min even
+	// when the charger reports a lower IEC-default floor (evcc-io/evcc#14418)
 	return max(vehicleMin, chargerMin, lpMin)
 }
 
@@ -198,6 +217,12 @@ func (lp *Loadpoint) effectiveMaxCurrent() float64 {
 	if c, ok := api.Cap[api.CurrentLimiter](lp.charger); ok {
 		if _, res, err := c.GetMinMaxCurrent(); err == nil && res > 0 {
 			maxCurrent = min(maxCurrent, res)
+		}
+	}
+
+	if c, ok := api.Cap[api.PowerLimiter](lp.charger); ok {
+		if _, res, err := c.GetMinMaxPower(); err == nil && res > 0 {
+			maxCurrent = min(maxCurrent, res/(Voltage*float64(lp.maxActivePhases())))
 		}
 	}
 

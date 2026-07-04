@@ -23,6 +23,7 @@ const (
 	LimitEnergy       = "limitEnergy"      // limit energy
 	Soc               = "soc"
 	Thresholds        = "thresholds"
+	UI                = "ui" // display-only ui settings (json)
 	EnableThreshold   = "enableThreshold"
 	DisableThreshold  = "disableThreshold"
 	EnableDelay       = "enableDelay"
