@@ -1129,6 +1129,7 @@
     }
   },
   "general": {
+    "discardChanges": "You have unsaved changes. Discard them?",
     "note": "Note:"
   },
   "header": {

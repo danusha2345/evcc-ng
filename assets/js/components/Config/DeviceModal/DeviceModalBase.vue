@@ -6,6 +6,7 @@
 		:data-testid="`${name}-modal`"
 		:size="modalSize"
 		:config-modal-name="name"
+		:unsaved-changes="hasChanges"
 		@open="handleOpen"
 		@close="handleClose"
 		@visibilitychange="handleVisibilityChange"
@@ -13,7 +14,12 @@
 		<template #header-actions>
 			<DeviceInfoButton v-if="id && !hideInfo" :id="id" />
 		</template>
-		<form ref="form" class="container mx-0 px-0">
+		<form
+			ref="form"
+			class="container mx-0 px-0"
+			@input="formTouched = true"
+			@change="formTouched = true"
+		>
 			<slot name="pre-content" :values="values"></slot>
 
 			<template v-if="showMainContent">
@@ -353,9 +359,17 @@ export default defineComponent({
 			adminPasswordValue: "",
 			adminPasswordRequired: false,
 			adminPasswordInvalid: false,
+			// set by real user input on the form; programmatic reset/load/template
+			// churn does not fire DOM input/change, so it stays a clean "user edited
+			// something" signal for the discard-confirm (evcc-io/evcc#31003)
+			formTouched: false,
 		};
 	},
 	computed: {
+		// drives GenericModal's discard-confirm on accidental backdrop/Escape close
+		hasChanges(): boolean {
+			return this.formTouched;
+		},
 		device() {
 			return createDeviceUtils(this.deviceType);
 		},
@@ -523,6 +537,7 @@ export default defineComponent({
 	watch: {
 		isModalVisible(visible) {
 			if (visible) {
+				this.formTouched = false;
 				this.templateName =
 					this.isNew && this.defaultTemplate ? this.defaultTemplate : null;
 				this.reset();
