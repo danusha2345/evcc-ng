@@ -2,34 +2,36 @@ package keys
 
 const (
 	// loadpoint settings
-	Name              = "name"             // loadpoint name (config identifier)
-	Title             = "title"            // loadpoint title
-	Mode              = "mode"             // charge mode
-	DefaultMode       = "defaultMode"      // default charge mode
-	Charger           = "charger"          // charger ref
-	Meter             = "meter"            // meter ref
-	Circuit           = "circuit"          // circuit ref
-	DefaultVehicle    = "vehicle"          // default vehicle ref
-	Priority          = "priority"         // priority
-	MinCurrent        = "minCurrent"       // min current
-	MaxCurrent        = "maxCurrent"       // max current
-	MinCurrent1p      = "minCurrent1p"     // optional override for 1-phase charging
-	MaxCurrent1p      = "maxCurrent1p"     // optional override for 1-phase charging
-	MinCurrent3p      = "minCurrent3p"     // optional override for 3-phase charging
-	MaxCurrent3p      = "maxCurrent3p"     // optional override for 3-phase charging
-	MinSoc            = "minSoc"           // min soc
-	MinSocNotReached  = "minSocNotReached" // min soc not reached
-	LimitSoc          = "limitSoc"         // limit soc
-	LimitEnergy       = "limitEnergy"      // limit energy
-	Soc               = "soc"
-	Thresholds        = "thresholds"
-	UI                = "ui" // display-only ui settings (json)
-	EnableThreshold   = "enableThreshold"
-	DisableThreshold  = "disableThreshold"
-	EnableDelay       = "enableDelay"
-	DisableDelay      = "disableDelay"
-	BatteryBoost      = "batteryBoost"
-	BatteryBoostLimit = "batteryBoostLimit"
+	Name             = "name"             // loadpoint name (config identifier)
+	Title            = "title"            // loadpoint title
+	Mode             = "mode"             // charge mode
+	DefaultMode      = "defaultMode"      // default charge mode
+	Charger          = "charger"          // charger ref
+	Meter            = "meter"            // meter ref
+	Circuit          = "circuit"          // circuit ref
+	DefaultVehicle   = "vehicle"          // default vehicle ref
+	Priority         = "priority"         // priority
+	MinCurrent       = "minCurrent"       // min current
+	MaxCurrent       = "maxCurrent"       // max current
+	MinCurrent1p     = "minCurrent1p"     // optional override for 1-phase charging
+	MaxCurrent1p     = "maxCurrent1p"     // optional override for 1-phase charging
+	MinCurrent3p     = "minCurrent3p"     // optional override for 3-phase charging
+	MaxCurrent3p     = "maxCurrent3p"     // optional override for 3-phase charging
+	MinSoc           = "minSoc"           // min soc
+	MinSocNotReached = "minSocNotReached" // min soc not reached
+	LimitSoc         = "limitSoc"         // limit soc
+	LimitEnergy      = "limitEnergy"      // limit energy
+	Soc              = "soc"
+	Thresholds       = "thresholds"
+	UI               = "ui" // display-only ui settings (json)
+	EnableThreshold  = "enableThreshold"
+	DisableThreshold = "disableThreshold"
+	EnableDelay      = "enableDelay"
+	DisableDelay     = "disableDelay"
+
+	DisableImmediateThreshold = "disableImmediateThreshold"
+	BatteryBoost              = "batteryBoost"
+	BatteryBoostLimit         = "batteryBoostLimit"
 
 	PhasesConfigured = "phasesConfigured" // desired phase mode (0/1/3, 0 = automatic), user selection
 	PhasesActive     = "phasesActive"     // expectedly active phases, taking vehicle into account (1/2/3)

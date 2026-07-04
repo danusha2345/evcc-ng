@@ -351,6 +351,58 @@ func TestPVHysteresis(t *testing.T) {
 	}
 }
 
+// TestPVHysteresisImmediateDisable verifies the immediate disable threshold
+// (evcc-io/evcc#31061): a moderate grid import still rides out Disable.Delay,
+// while an import at/above Disable.ImmediateThreshold stops charging at once.
+func TestPVHysteresisImmediateDisable(t *testing.T) {
+	const dt = time.Minute
+	const phases = 3
+
+	clock := clock.NewMock()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	Voltage = 100
+	lp := &Loadpoint{
+		log:            util.NewLogger("foo"),
+		clock:          clock,
+		charger:        api.NewMockCharger(ctrl),
+		minCurrent:     minA,
+		maxCurrent:     maxA,
+		phases:         phases,
+		measuredPhases: phases,
+		enabled:        true,
+		status:         api.StatusC,
+		Disable: loadpoint.ThresholdConfig{
+			Threshold:          200,
+			Delay:              dt,
+			ImmediateThreshold: 1000,
+		},
+	}
+
+	start := clock.Now()
+
+	// moderate import (>= threshold, < immediate): keep charging until the delay elapses
+	if got := lp.pvMaxCurrent(api.ModePV, 500, 0, false, false); got != minA {
+		t.Errorf("moderate import t=0: want %v, got %v", minA, got)
+	}
+	clock.Set(start.Add(dt - 1))
+	if got := lp.pvMaxCurrent(api.ModePV, 500, 0, false, false); got != minA {
+		t.Errorf("moderate import before delay: want %v, got %v", minA, got)
+	}
+	clock.Set(start.Add(dt + 1))
+	if got := lp.pvMaxCurrent(api.ModePV, 500, 0, false, false); got != 0 {
+		t.Errorf("moderate import after delay: want 0, got %v", got)
+	}
+
+	// large import (>= immediate): disable right away, no delay
+	lp.resetPVTimer()
+	lp.enabled = true
+	if got := lp.pvMaxCurrent(api.ModePV, 1000, 0, false, false); got != 0 {
+		t.Errorf("large import t=0: want immediate 0, got %v", got)
+	}
+}
+
 func TestPVHysteresisForStatusOtherThanC(t *testing.T) {
 	const phases = 3
 

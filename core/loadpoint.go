@@ -215,6 +215,9 @@ func NewLoadpointFromConfig(log *util.Logger, settings settings.Settings, collec
 	} else if lp.Enable.Threshold > 0 {
 		lp.log.WARN.Printf("PV mode enable threshold %.0fW > 0 will start PV charging on grid power consumption. Did you mean -%.0f?", lp.Enable.Threshold, lp.Enable.Threshold)
 	}
+	if lp.Disable.ImmediateThreshold != 0 && lp.Disable.ImmediateThreshold < lp.Disable.Threshold {
+		lp.log.WARN.Printf("PV mode immediate disable threshold (%.0fW) is below disable threshold (%.0fW) and will never trigger", lp.Disable.ImmediateThreshold, lp.Disable.Threshold)
+	}
 
 	// choose sane default if mode is not set
 	if lp.mode = lp.DefaultMode; lp.mode == "" {
@@ -725,6 +728,7 @@ func (lp *Loadpoint) Prepare(site site.API, uiChan chan<- util.Param, pushChan c
 	lp.publish(keys.DisableThreshold, lp.Disable.Threshold)
 	lp.publish(keys.EnableDelay, lp.Enable.Delay)
 	lp.publish(keys.DisableDelay, lp.Disable.Delay)
+	lp.publish(keys.DisableImmediateThreshold, lp.Disable.ImmediateThreshold)
 
 	lp.publish(keys.UI, lp.ui)
 
@@ -1601,6 +1605,14 @@ func (lp *Loadpoint) pvMaxCurrent(mode api.ChargeMode, sitePower, batteryBoostPo
 		// flash on/off forever while climater is active (issue #29834).
 		if projectedSitePower >= lp.Disable.Threshold && !lp.vehicleClimateActive() {
 			lp.log.DEBUG.Printf("projected site power %.0fW >= %.0fW disable threshold", projectedSitePower, lp.Disable.Threshold)
+
+			// immediate disable on a large grid import, bypassing the disable
+			// delay so charging stops right away (evcc-io/evcc#31061)
+			if it := lp.Disable.ImmediateThreshold; it > 0 && projectedSitePower >= it {
+				lp.log.DEBUG.Printf("projected site power %.0fW >= %.0fW immediate disable threshold", projectedSitePower, it)
+				lp.resetPVTimer()
+				return 0
+			}
 
 			if lp.pvTimer.IsZero() {
 				lp.log.DEBUG.Printf("pv disable timer start: %v", lp.GetDisableDelay())
