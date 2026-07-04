@@ -42,6 +42,37 @@ func TestBatterySocRetainOnReadError(t *testing.T) {
 	assert.Equal(t, 84.0, site.battery.Soc, "soc retained when the read fails")
 }
 
+// TestBatterySocPartialReadError guards that when one of several batteries fails
+// to report, the pack soc averages over the batteries that did report instead of
+// counting the missing pack as 0% (evcc-io/evcc#31049).
+func TestBatterySocPartialReadError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	newBattery := func(soc float64, err error) api.Meter {
+		meter := api.NewMockMeter(ctrl)
+		meter.EXPECT().CurrentPower().Return(0.0, nil).AnyTimes()
+		battery := api.NewMockBattery(ctrl)
+		battery.EXPECT().Soc().Return(soc, err).AnyTimes()
+		return &struct {
+			api.Meter
+			api.Battery
+		}{Meter: meter, Battery: battery}
+	}
+
+	site := &Site{
+		log: util.NewLogger("foo"),
+		batteryMeters: []config.Device[api.Meter]{
+			config.NewStaticDevice(config.Named{}, newBattery(80, nil)),
+			config.NewStaticDevice(config.Named{}, newBattery(0, errors.New("read failed"))),
+		},
+	}
+	site.battery.Soc = 84
+
+	site.updateBatteryMeters()
+
+	assert.Equal(t, 80.0, site.battery.Soc, "soc averages over the readable battery, not counting the failed one as 0%")
+}
+
 func TestApplyBatteryMode(t *testing.T) {
 	for _, tc := range []struct {
 		internal, expected api.BatteryMode

@@ -690,17 +690,23 @@ func (site *Site) updateBatteryMeters() {
 	if lo.EveryBy(mm, func(m types.Measurement) bool { return m.Soc == nil }) {
 		site.log.WARN.Printf("battery soc: read failed, keeping last %.0f%%", site.battery.Soc)
 	} else {
+		// average only over batteries that actually reported this cycle: a partial
+		// read failure must not count the missing pack as 0% and drag the whole
+		// pack soc — and with it battery boost / prioritySoc gating — down
+		// (evcc-io/evcc#31049). The all-failed case is retained above.
+		readable := lo.Filter(mm, func(m types.Measurement, _ int) bool { return m.Soc != nil })
+
 		var batterySocAcc float64
 		var totalCapacity float64
 
-		if lo.SomeBy(mm, func(m types.Measurement) bool { return m.Capacity == nil || *m.Capacity <= 0 }) {
+		if lo.SomeBy(readable, func(m types.Measurement) bool { return m.Capacity == nil || *m.Capacity <= 0 }) {
 			// any capacity is missing
-			batterySocAcc = sumOfSocs(mm)
-			totalCapacity = float64(len(site.batteryMeters))
+			batterySocAcc = sumOfSocs(readable)
+			totalCapacity = float64(len(readable))
 		} else {
 			// all capacities available - weigh soc by capacity
-			batterySocAcc = weightedSumOfSocs(mm)
-			totalCapacity = lo.SumBy(mm, func(m types.Measurement) float64 { return *m.Capacity })
+			batterySocAcc = weightedSumOfSocs(readable)
+			totalCapacity = lo.SumBy(readable, func(m types.Measurement) float64 { return *m.Capacity })
 		}
 
 		site.battery.Soc = math.Min(100, batterySocAcc/totalCapacity)
