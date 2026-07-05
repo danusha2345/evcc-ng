@@ -3,8 +3,16 @@
 Fork of `evcc-io/evcc` focused on fixing long-standing backlog issues and
 adding top-voted features. Origin: `danusha2345/evcc-ng`. Sync `master` with
 upstream periodically by **merge** (not rebase — branch protection blocks
-force-push). Releases tagged `0.307.0-ngN`; latest is `0.307.0-ng7`.
+force-push). Releases tagged `0.307.0-ngN`; latest is `0.307.0-ng10`.
 Donations: a Boosty link in the README, nothing more.
+
+Releases: pushing a tag runs `.github/workflows/release.yml`, which reuses the
+fork's own `default.yml` (all `ubuntu-latest`) then publishes a **GitHub Release
+only** via goreleaser with `.goreleaser-ng.yml` (cross-platform tar.gz/zip +
+.deb + checksums, same asset set as upstream). Upstream's Docker/Cloudsmith-APT/
+Homebrew/Hassio/fly.io steps are intentionally dropped — they need Depot
+self-hosted runners and org secrets the fork lacks (that was why every earlier
+`-ngN` release run sat queued for 24h and got auto-cancelled).
 
 Upstream PRs are NOT welcome here — the maintainer rejected our submissions as
 "AI cruft" and closed them all. Work only in this fork; act on any technical

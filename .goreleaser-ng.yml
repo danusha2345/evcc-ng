@@ -1,0 +1,132 @@
+# evcc-ng fork release config: GitHub Release with cross-platform binaries + .deb.
+# Mirrors the upstream release assets (tar.gz/zip/.deb/checksums) but drops what
+# needs upstream infra the fork lacks: Docker Hub, the Cloudsmith APT repo,
+# the evcc-io/homebrew-tap, Hassio and the fly.io demo. The .deb packages are
+# attached to the GitHub Release directly (no Cloudsmith). See
+# .github/workflows/release.yml.
+version: 2
+
+dist: release
+release:
+  github:
+    owner: danusha2345
+    name: evcc-ng
+  mode: replace
+  prerelease: auto
+
+builds:
+  - id: evcc
+    main: .
+    flags:
+      - -trimpath
+      - -tags=release
+    ldflags:
+      - -X github.com/evcc-io/evcc/util.Version={{ .Version }} -s -w
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "6"
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+    overrides:
+      - goos: windows
+        goarch: amd64
+        flags:
+          - -trimpath
+          - -tags=release,timetzdata
+
+env:
+  - CGO_ENABLED=0
+
+archives:
+  - ids:
+      - evcc
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - evcc.dist.yaml
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ if eq .Os "darwin" }}macOS{{ else }}{{ .Os }}{{ end }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
+
+universal_binaries:
+  # build id is `evcc`, but the fork's project name is `evcc-ng`; pin both the
+  # source filter and the resulting artifact id to `evcc` so the merged binary
+  # matches archives.ids below — otherwise it defaults to the project name,
+  # gets filtered out, and no macOS-all archive is produced.
+  - id: evcc
+    ids:
+      - evcc
+    replace: true
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^chore"
+      - "^bump"
+      - "^docs:"
+      - "^test:"
+      - "^build"
+      - "^Translations"
+  groups:
+    - title: "Breaking Changes 🚨"
+      regexp: '(?i)\(BC\)'
+      order: 10
+    - title: "Bug Fixes 🐞"
+      regexp: '(?i)^fix:|\bfix\b'
+      order: 40
+    - title: "New Features 💫"
+      regexp: '(?i)^feat:|\badd\b'
+      order: 20
+    - title: "Experimental Features 🧪"
+      regexp: '(?i)^experimental:|\bexperimental\b'
+      order: 25
+    - title: "Other Changes ☀️"
+      order: 30
+
+nfpms:
+  - id: default
+    package_name: evcc
+    file_name_template: "{{ .ConventionalFileName }}"
+
+    homepage: https://evcc.io
+    description: EV Charge Controller
+    maintainer: info@evcc.io
+    license: MIT
+    vendor: evcc.io
+
+    formats:
+      - deb
+
+    dependencies:
+      - adduser
+      - ucf
+
+    contents:
+      - src: ./packaging/init/evcc.service
+        dst: /lib/systemd/system/evcc.service
+
+    scripts:
+      preinstall: ./packaging/scripts/preinstall.sh
+      postinstall: ./packaging/scripts/postinstall.sh
+      preremove: ./packaging/scripts/preremove.sh
+      postremove: ./packaging/scripts/postremove.sh
