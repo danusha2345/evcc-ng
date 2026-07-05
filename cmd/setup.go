@@ -321,7 +321,7 @@ func meterWrapper() deviceWrapper[api.Meter] {
 }
 
 func staticInstance[T any](typ string, cc config.Named, newFromConf newFromConfFunc[T], h config.Handler[T], wrap deviceWrapper[T]) error {
-	ctx, cancel := context.WithCancel(util.WithLogger(context.TODO(), util.NewLogger(cc.Name))) //nolint:govet
+	ctx, cancel := context.WithCancel(util.WithLogger(context.TODO(), util.NewLogger(cc.Name)))
 
 	instance, err := newFromConf(ctx, cc.Type, cc.Other)
 	if err != nil {
