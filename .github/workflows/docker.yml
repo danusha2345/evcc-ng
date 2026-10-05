@@ -5,12 +5,18 @@ on:
     paths:
       - Dockerfile
       - .github/workflows/docker.yml
+      - go.mod
+      - go.sum
+      - '**/*.go'
   push:
     branches:
       - master
     paths:
       - Dockerfile
       - .github/workflows/docker.yml
+      - go.mod
+      - go.sum
+      - '**/*.go'
   workflow_dispatch:
 
 permissions:

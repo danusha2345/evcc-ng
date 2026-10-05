@@ -11,7 +11,7 @@ If `evcc-ng` is useful to you, you can support this fork's development via [Boos
 [![Translation](https://hosted.weblate.org/widgets/evcc/-/evcc/svg-badge.svg)](https://hosted.weblate.org/engage/evcc/)
 ![Docker Pulls](https://img.shields.io/docker/pulls/evcc/evcc)
 [![OSS hosting by cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith)](https://cloudsmith.io/~evcc/packages/)
-[![Latest Version](https://img.shields.io/github/release/evcc-io/evcc.svg)](https://github.com/evcc-io/evcc/releases)
+[![Latest Version](https://img.shields.io/github/v/release/danusha2345/evcc-ng?include_prereleases)](https://github.com/danusha2345/evcc-ng/releases)
 <br/>
 [![Built with Depot](https://depot.dev/badges/built-with-depot.svg)](https://depot.dev/?utm_source=evcc)
 

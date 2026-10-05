@@ -27,9 +27,23 @@ jobs:
     outputs:
       number: ${{ steps.read.outputs.number }}
       found: ${{ steps.check.outputs.found }}
+      configured: ${{ steps.credentials.outputs.configured }}
     steps:
+      - name: Check Claude credentials
+        id: credentials
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Claude Code Review пропущен: CLAUDE_CODE_OAUTH_TOKEN не настроен."
+          fi
+
       - name: Check for PR-number artifact
         id: check
+        if: steps.credentials.outputs.configured == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
         with:
           script: |
@@ -62,7 +76,7 @@ jobs:
 
   claude-review:
     needs: gate
-    if: needs.gate.outputs.found == 'true'
+    if: needs.gate.outputs.configured == 'true' && needs.gate.outputs.found == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

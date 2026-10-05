@@ -17,6 +17,7 @@ release:
 builds:
   - id: evcc
     main: .
+    binary: evcc
     flags:
       - -trimpath
       - -tags=release
@@ -69,6 +70,7 @@ universal_binaries:
   - id: evcc
     ids:
       - evcc
+    name_template: evcc
     replace: true
 
 checksum:
@@ -106,7 +108,7 @@ changelog:
 nfpms:
   - id: default
     package_name: evcc
-    file_name_template: "{{ .ConventionalFileName }}"
+    file_name_template: '{{ replace .ConventionalFileName "~" "." }}'
 
     homepage: https://evcc.io
     description: EV Charge Controller
