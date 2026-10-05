@@ -82,6 +82,16 @@ jobs:
           cat checksums.txt
           sha256sum checksums.txt
 
+          for archive in *.tar.gz; do
+            [[ "$(tar -tzf "$archive" | sort)" == $'evcc\nevcc.dist.yaml' ]]
+          done
+          for archive in *.zip; do
+            [[ "$(unzip -Z1 "$archive" | sort)" == $'evcc.dist.yaml\nevcc.exe' ]]
+          done
+          for package in "${packages[@]}"; do
+            dpkg-deb --fsys-tarfile "$package" | tar -tf - | sed 's#^\./##' | grep -Fx 'usr/bin/evcc'
+          done
+
           native_archives=( *_linux-amd64.tar.gz )
           [[ ${#native_archives[@]} == 1 ]]
           snapshot_version="${native_archives[0]#evcc-ng_}"
