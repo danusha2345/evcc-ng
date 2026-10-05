@@ -1,0 +1,103 @@
+name: Release check
+
+on:
+  pull_request:
+    paths:
+      - go.mod
+      - go.sum
+      - .goreleaser-ng.yml
+      - .github/workflows/release*.yml
+  push:
+    branches:
+      - master
+    paths:
+      - go.mod
+      - go.sum
+      - .goreleaser-ng.yml
+      - .github/workflows/release*.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    name: Snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+
+      - name: Build UI
+        run: make install-ui ui
+
+      - name: Patch ASN1
+        run: make patch-asn1-sudo
+
+      - name: Check release configuration
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          version: "~> v2"
+          args: check --config .goreleaser-ng.yml
+
+      - name: Build snapshot
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          version: "~> v2"
+          args: release --snapshot --skip=publish --clean --config .goreleaser-ng.yml
+
+      - name: Verify snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          cd release
+
+          archives=( *.tar.gz *.zip )
+          packages=( *.deb )
+          payloads=( "${archives[@]}" "${packages[@]}" checksums.txt )
+          printf 'User payload count: %s (archives: %s, packages: %s, checksums: 1)\n' \
+            "${#payloads[@]}" "${#archives[@]}" "${#packages[@]}"
+          [[ ${#payloads[@]} == 9 && ${#archives[@]} == 5 && ${#packages[@]} == 3 ]]
+          sha256sum --check --strict checksums.txt
+          cat checksums.txt
+          sha256sum checksums.txt
+
+          native_archives=( *_linux-amd64.tar.gz )
+          [[ ${#native_archives[@]} == 1 ]]
+          snapshot_version="${native_archives[0]#evcc-ng_}"
+          snapshot_version="${snapshot_version%_linux-amd64.tar.gz}"
+          smoke_dir="$(mktemp -d "${RUNNER_TEMP}/release-smoke.XXXXXX")"
+          trap 'rm -rf "$smoke_dir"' EXIT
+          tar -xzf "${native_archives[0]}" -C "$smoke_dir"
+
+          mapfile -t binaries < <(find "$smoke_dir" -maxdepth 1 -type f -executable)
+          [[ ${#binaries[@]} == 1 ]]
+          [[ "${binaries[0]}" == "$smoke_dir/evcc" ]]
+          binary_version="$(timeout 30s "${binaries[0]}" --version)"
+          printf '%s\n' "$binary_version"
+          [[ "$binary_version" == *"$snapshot_version"* ]]
+
+          build_info="$(go version -m "${binaries[0]}")"
+          printf '%s\n' "$build_info"
+          [[ "${build_info%%$'\n'*}" == *': go1.26.8' ]]
+          [[ "$build_info" == *'CGO_ENABLED=0'* ]]

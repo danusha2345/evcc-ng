@@ -30,6 +30,74 @@ certificate:
 	require.NoError(t, yaml.Unmarshal([]byte(conf), &res))
 }
 
+func TestServicePairingDetailUpdate(t *testing.T) {
+	identity := shipapi.NewServiceIdentity("aabbcc", "fingerprint", "paired")
+	dev := &mockDevice{}
+
+	for _, tc := range []struct {
+		name    string
+		paired  []shipapi.ServiceIdentity
+		clients map[string][]Device
+		cancel  bool
+	}{
+		{
+			name:    "configured ski",
+			clients: map[string][]Device{identity.SKI: {dev}},
+		},
+		{
+			name:    "paired fingerprint before ski discovery",
+			paired:  []shipapi.ServiceIdentity{shipapi.NewServiceIdentity("", identity.Fingerprint, "paired")},
+			clients: map[string][]Device{"": {dev}},
+		},
+		{
+			name:   "paired ski after restart",
+			paired: []shipapi.ServiceIdentity{shipapi.NewServiceIdentity(identity.SKI, "", "")},
+		},
+		{
+			name:   "unknown ski",
+			cancel: true,
+		},
+		{
+			name:    "unknown ski with paired consumer",
+			clients: map[string][]Device{"": {dev}},
+			cancel:  true,
+		},
+		{
+			name:    "different paired device",
+			paired:  []shipapi.ServiceIdentity{shipapi.NewServiceIdentity("ddeeff", "other", "other")},
+			clients: map[string][]Device{"": {dev}},
+			cancel:  true,
+		},
+		{
+			name:    "same ship id with different certificate",
+			paired:  []shipapi.ServiceIdentity{shipapi.NewServiceIdentity("ddeeff", "other", identity.ShipID)},
+			clients: map[string][]Device{"": {dev}},
+			cancel:  true,
+		},
+		{
+			name:    "same ski with different fingerprint",
+			paired:  []shipapi.ServiceIdentity{shipapi.NewServiceIdentity(identity.SKI, "other", identity.ShipID)},
+			clients: map[string][]Device{"": {dev}},
+			cancel:  true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			service := eebusmocks.NewServiceInterface(t)
+			c := &EEBus{service: service, paired: tc.paired, clients: tc.clients}
+			detail := shipapi.NewConnectionStateDetail(shipapi.ConnectionStateReceivedPairingRequest, nil)
+			if tc.cancel {
+				service.EXPECT().CancelPairing(identity).Run(func(shipapi.ServiceIdentity) {
+					require.True(t, c.mux.TryLock(), "CancelPairing called with server mutex held")
+					c.mux.Unlock()
+					detail.SetState(shipapi.ConnectionStateNone)
+					c.ServicePairingDetailUpdate(identity, detail)
+				}).Once()
+			}
+			c.ServicePairingDetailUpdate(identity, detail)
+		})
+	}
+}
+
 // mockDevice implements Device for testing
 type mockDevice struct{}
 

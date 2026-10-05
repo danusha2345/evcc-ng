@@ -562,10 +562,16 @@ func (c *EEBus) ServicePairingDetailUpdate(identity shipapi.ServiceIdentity, det
 	}
 
 	c.mux.Lock()
-	defer c.mux.Unlock()
+	known := len(c.clients[identity.SKI]) > 0 || slices.ContainsFunc(c.paired, func(paired shipapi.ServiceIdentity) bool {
+		if paired.Fingerprint != "" {
+			return identity.Fingerprint != "" && identity.Fingerprint == paired.Fingerprint
+		}
+		return identity.SKI != "" && identity.SKI == paired.SKI
+	})
+	c.mux.Unlock()
 
-	if clients, ok := c.clients[identity.SKI]; !ok || len(clients) == 0 {
-		// this is an unknown SKI, so deny pairing
+	// CancelPairing can synchronously call back into this server.
+	if !known {
 		c.service.CancelPairing(identity)
 	}
 }
