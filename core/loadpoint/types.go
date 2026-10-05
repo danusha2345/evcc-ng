@@ -14,6 +14,10 @@ type ThresholdsConfig struct {
 type ThresholdConfig struct {
 	Delay     time.Duration `json:"delay"`
 	Threshold float64       `json:"threshold"`
+	// ImmediateThreshold, when > 0, bypasses Delay for the disable path: PV
+	// charging stops right away once grid import reaches this (higher) power,
+	// while smaller overshoots still ride out Delay (evcc-io/evcc#31061).
+	ImmediateThreshold float64 `json:"immediateThreshold"`
 }
 
 // SocConfig defines soc settings, estimation and update behavior

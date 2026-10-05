@@ -98,6 +98,7 @@ type Loadpoint struct {
 
 	Soc             loadpoint.SocConfig
 	Enable, Disable loadpoint.ThresholdConfig
+	ui              loadpoint.UIConfig // display-only, not used in control logic
 
 	// from yaml
 	DefaultMode api.ChargeMode `mapstructure:"mode"`     // Default charge mode, used for disconnect
@@ -213,6 +214,11 @@ func NewLoadpointFromConfig(log *util.Logger, settings settings.Settings, collec
 		lp.log.WARN.Printf("PV mode enable threshold (%.0fW) is larger than disable threshold (%.0fW)", lp.Enable.Threshold, lp.Disable.Threshold)
 	} else if lp.Enable.Threshold > 0 {
 		lp.log.WARN.Printf("PV mode enable threshold %.0fW > 0 will start PV charging on grid power consumption. Did you mean -%.0f?", lp.Enable.Threshold, lp.Enable.Threshold)
+	}
+	if lp.Disable.ImmediateThreshold < 0 {
+		lp.log.WARN.Printf("PV mode immediate disable threshold (%.0fW) is negative and will never trigger", lp.Disable.ImmediateThreshold)
+	} else if lp.Disable.ImmediateThreshold != 0 && lp.Disable.ImmediateThreshold < lp.Disable.Threshold {
+		lp.log.WARN.Printf("PV mode immediate disable threshold (%.0fW) is below disable threshold (%.0fW) and will make every disable immediate, bypassing the disable delay", lp.Disable.ImmediateThreshold, lp.Disable.Threshold)
 	}
 
 	// choose sane default if mode is not set
@@ -399,6 +405,11 @@ func (lp *Loadpoint) restoreSettings() {
 	var socConfig loadpoint.SocConfig
 	if err := lp.settings.Json(keys.Soc, &socConfig); err == nil {
 		lp.setSocConfig(socConfig)
+	}
+
+	var ui loadpoint.UIConfig
+	if err := lp.settings.Json(keys.UI, &ui); err == nil {
+		lp.ui = ui
 	}
 
 	t, err1 := lp.settings.Time(keys.PlanTime)
@@ -719,6 +730,9 @@ func (lp *Loadpoint) Prepare(site site.API, uiChan chan<- util.Param, pushChan c
 	lp.publish(keys.DisableThreshold, lp.Disable.Threshold)
 	lp.publish(keys.EnableDelay, lp.Enable.Delay)
 	lp.publish(keys.DisableDelay, lp.Disable.Delay)
+	lp.publish(keys.DisableImmediateThreshold, lp.Disable.ImmediateThreshold)
+
+	lp.publish(keys.UI, lp.ui)
 
 	if phases := lp.getChargerPhysicalPhases(); phases != 0 {
 		if lp.phasesConfigured != phases && lp.phasesConfigured != 0 {
@@ -978,7 +992,7 @@ func (lp *Loadpoint) setLimit(current float64) error {
 
 		if err != nil {
 			v := lp.GetVehicle()
-			if vv, ok := api.Cap[api.Resurrector](v); ok && errors.Is(err, api.ErrAsleep) {
+			if vv, ok := api.Cap[api.Resurrector](v); ok && errors.Is(err, api.ErrAsleep) && !hasFeature(v, api.WakeUpDisabled) {
 				// https://github.com/evcc-io/evcc/issues/8254
 				// wakeup vehicle
 				lp.log.DEBUG.Printf("set charge current limit: waking up vehicle")
@@ -999,7 +1013,7 @@ func (lp *Loadpoint) setLimit(current float64) error {
 	if enabled := current >= effMinCurrent; enabled != lp.enabled {
 		if err := lp.charger.Enable(enabled); err != nil {
 			v := lp.GetVehicle()
-			if vv, ok := api.Cap[api.Resurrector](v); enabled && ok && errors.Is(err, api.ErrAsleep) {
+			if vv, ok := api.Cap[api.Resurrector](v); enabled && ok && errors.Is(err, api.ErrAsleep) && !hasFeature(v, api.WakeUpDisabled) {
 				// https://github.com/evcc-io/evcc/issues/8254
 				// wakeup vehicle
 				lp.log.DEBUG.Printf("charger %s: waking up vehicle", status[enabled])
@@ -1594,6 +1608,14 @@ func (lp *Loadpoint) pvMaxCurrent(mode api.ChargeMode, sitePower, batteryBoostPo
 		if projectedSitePower >= lp.Disable.Threshold && !lp.vehicleClimateActive() {
 			lp.log.DEBUG.Printf("projected site power %.0fW >= %.0fW disable threshold", projectedSitePower, lp.Disable.Threshold)
 
+			// immediate disable on a large grid import, bypassing the disable
+			// delay so charging stops right away (evcc-io/evcc#31061)
+			if it := lp.Disable.ImmediateThreshold; it > 0 && projectedSitePower >= it {
+				lp.log.DEBUG.Printf("projected site power %.0fW >= %.0fW immediate disable threshold", projectedSitePower, it)
+				lp.resetPVTimer()
+				return 0
+			}
+
 			if lp.pvTimer.IsZero() {
 				lp.log.DEBUG.Printf("pv disable timer start: %v", lp.GetDisableDelay())
 				lp.pvTimer = lp.clock.Now()
@@ -1805,13 +1827,13 @@ func (lp *Loadpoint) publishChargeProgress() {
 				telemetry.UpdateEnergy(added, addedGreen)
 			}
 		}
-	} else {
+	} else if !errors.Is(err, api.ErrNotAvailable) {
 		lp.log.ERROR.Printf("charge rater: %v", err)
 	}
 
 	if d, err := lp.chargeTimer.ChargeDuration(); err == nil {
 		lp.chargeDuration = d.Round(time.Second)
-	} else {
+	} else if !errors.Is(err, api.ErrNotAvailable) {
 		lp.log.ERROR.Printf("charge timer: %v", err)
 	}
 
@@ -1833,6 +1855,9 @@ func (lp *Loadpoint) publishChargeProgress() {
 
 	if lp.chargeEnergy != nil {
 		lp.chargeEnergy.AddEnergy(importTotal, nil, lp.chargePower)
+		if v := lp.GetSoc(); v > 0 {
+			lp.chargeEnergy.SetSocTemp(v, lp.chargerHasFeature(api.Heating))
+		}
 	}
 }
 
@@ -1973,6 +1998,10 @@ func (lp *Loadpoint) processTasks() {
 
 // startWakeUpTimer starts wakeUpTimer
 func (lp *Loadpoint) startWakeUpTimer() {
+	if lp.vehicleHasFeature(api.WakeUpDisabled) {
+		return
+	}
+
 	lp.log.DEBUG.Printf("wake-up timer: start")
 	lp.wakeUpTimer.Start()
 }

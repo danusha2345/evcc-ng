@@ -21,7 +21,7 @@ RUN make ui
 
 
 # STEP 2 build executable binary
-FROM --platform=$BUILDPLATFORM golang:1.26.3-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.8-alpine@sha256:8ac98ca534ac3f51e1f420a1dd2c15e74c75cfa0f23f3ad27eb5d7236c349a0c AS builder
 
 # Install git + SSL ca certificates.
 # Git is required for fetching the dependencies.
@@ -68,7 +68,7 @@ RUN --mount=type=cache,target=${GOCACHE} --mount=type=cache,target=${GOMODCACHE}
 
 
 # STEP 3 build a small image including module support
-FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 
 WORKDIR /app
 
